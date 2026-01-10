@@ -1,0 +1,80 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="300dp"
+    android:viewportWidth="400"
+    android:viewportHeight="300">
+    
+    <!-- Sky gradient background -->
+    <path
+        android:fillColor="#87CEEB"
+        android:pathData="M0,0 L400,0 L400,180 L0,180 Z" />
+    
+    <!-- Sun -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M320,60 m-30,0 a30,30 0 1,1 60,0 a30,30 0 1,1 -60,0" />
+    
+    <!-- Sun rays -->
+    <path
+        android:strokeColor="#FFD700"
+        android:strokeWidth="3"
+        android:pathData="M320,20 L320,10 M350,35 L360,25 M360,60 L370,60 M350,85 L360,95 M320,100 L320,110 M290,85 L280,95 M280,60 L270,60 M290,35 L280,25" />
+    
+    <!-- Mountain 1 (back) -->
+    <path
+        android:fillColor="#5D6D7E"
+        android:pathData="M0,180 L100,80 L200,180 Z" />
+    
+    <!-- Mountain 2 (middle) -->
+    <path
+        android:fillColor="#7F8C8D"
+        android:pathData="M80,180 L200,60 L320,180 Z" />
+    
+    <!-- Mountain 3 (front) -->
+    <path
+        android:fillColor="#95A5A6"
+        android:pathData="M200,180 L300,100 L400,180 Z" />
+    
+    <!-- Snow caps -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M195,70 L200,60 L205,70 L200,75 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M295,110 L300,100 L305,110 L300,115 Z" />
+    
+    <!-- Ground -->
+    <path
+        android:fillColor="#228B22"
+        android:pathData="M0,180 L400,180 L400,300 L0,300 Z" />
+    
+    <!-- Rolling hills -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M0,220 Q100,180 200,220 Q300,260 400,220 L400,300 L0,300 Z" />
+    
+    <!-- Trees -->
+    <path
+        android:fillColor="#1B5E20"
+        android:pathData="M50,250 L60,200 L70,250 Z" />
+    <path
+        android:fillColor="#1B5E20"
+        android:pathData="M120,260 L135,190 L150,260 Z" />
+    <path
+        android:fillColor="#1B5E20"
+        android:pathData="M280,255 L295,195 L310,255 Z" />
+    <path
+        android:fillColor="#1B5E20"
+        android:pathData="M350,265 L360,220 L370,265 Z" />
+    
+    <!-- Lake -->
+    <path
+        android:fillColor="#4169E1"
+        android:pathData="M160,270 Q200,250 240,270 Q200,290 160,270" />
+    
+    <!-- Lake reflection -->
+    <path
+        android:fillColor="#5179F1"
+        android:pathData="M180,275 Q200,268 220,275" />
+</vector>
+

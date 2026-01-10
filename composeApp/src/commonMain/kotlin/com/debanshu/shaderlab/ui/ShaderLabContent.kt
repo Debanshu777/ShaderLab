@@ -1,0 +1,268 @@
+package com.debanshu.shaderlab.ui
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.debanshu.shaderlab.imagelib.ExportConfig
+import com.debanshu.shaderlab.imagelib.ExportResult
+import com.debanshu.shaderlab.imagelib.PickResult
+import com.debanshu.shaderlab.imagelib.createImageExporter
+import com.debanshu.shaderlab.imagelib.rememberImagePickerLauncher
+import com.debanshu.shaderlab.viewmodel.ImageSource
+import com.debanshu.shaderlab.viewmodel.ShaderLabViewModel
+import kotlinx.coroutines.launch
+import kotlin.random.Random
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ShaderLabContent(
+    viewModel: ShaderLabViewModel
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    
+    val imagePicker = rememberImagePickerLauncher { result ->
+        when (result) {
+            is PickResult.Success -> {
+                viewModel.onImagePicked(result)
+            }
+            is PickResult.Error -> {
+                scope.launch {
+                    snackbarHostState.showSnackbar("Failed to pick image: ${result.message}")
+                }
+            }
+            is PickResult.Cancelled -> {
+                // User cancelled, do nothing
+            }
+        }
+    }
+    
+    // Show export message
+    LaunchedEffect(uiState.exportMessage) {
+        uiState.exportMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearExportMessage()
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "ShaderLab",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (!uiState.shadersSupported) {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = MaterialTheme.colorScheme.errorContainer,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "Limited",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { viewModel.toggleBeforeAfter() },
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = if (uiState.showBeforeAfter)
+                                MaterialTheme.colorScheme.primaryContainer
+                            else
+                                MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.CompareArrows,
+                            contentDescription = "Toggle before/after comparison",
+                            tint = if (uiState.showBeforeAfter)
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                val selectedImage = uiState.selectedImage
+                                when (selectedImage) {
+                                    is ImageSource.Picked -> {
+                                        val bytes = selectedImage.bytes
+                                        if (bytes != null) {
+                                            val exporter = createImageExporter()
+                                            if (exporter.isSupported) {
+                                                val config = ExportConfig()
+                                                val fileName = "shaderlab_${Random.nextInt(100000, 999999)}"
+                                                when (val result = exporter.exportImage(bytes, fileName, config)) {
+                                                    is ExportResult.Success -> {
+                                                        snackbarHostState.showSnackbar("Image saved successfully!")
+                                                    }
+                                                    is ExportResult.Error -> {
+                                                        snackbarHostState.showSnackbar("Export failed: ${result.message}")
+                                                    }
+                                                    is ExportResult.NotSupported -> {
+                                                        snackbarHostState.showSnackbar("Export not supported on this platform")
+                                                    }
+                                                }
+                                            } else {
+                                                snackbarHostState.showSnackbar("Export not available")
+                                            }
+                                        } else {
+                                            snackbarHostState.showSnackbar("Cannot export - image data not available")
+                                        }
+                                    }
+                                    is ImageSource.Bundled -> {
+                                        snackbarHostState.showSnackbar("Please select a picked image to export")
+                                    }
+                                }
+                            }
+                        },
+                        enabled = uiState.selectedImage is ImageSource.Picked && !uiState.isExporting
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Export image",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    IconButton(onClick = { viewModel.toggleTheme() }) {
+                        Icon(
+                            imageVector = if (uiState.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = "Toggle theme",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+        ) {
+            ImageGallery(
+                sampleImages = uiState.sampleImages,
+                pickedImages = uiState.pickedImages,
+                selectedImage = uiState.selectedImage,
+                onSelectImage = { viewModel.selectImage(it) },
+                onAddImage = { imagePicker.launch() },
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            AnimatedContent(
+                targetState = uiState.showBeforeAfter,
+                transitionSpec = {
+                    fadeIn() togetherWith fadeOut()
+                },
+                label = "previewMode",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) { showComparison ->
+                if (showComparison) {
+                    BeforeAfterView(
+                        imageSource = uiState.selectedImage,
+                        effect = uiState.activeEffect,
+                        onWaveTimeUpdate = { viewModel.updateAnimationTime(it) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(4f / 3f)
+                            .clip(RoundedCornerShape(16.dp))
+                    )
+                } else {
+                    ShaderPreview(
+                        imageSource = uiState.selectedImage,
+                        effect = uiState.activeEffect,
+                        onWaveTimeUpdate = { viewModel.updateAnimationTime(it) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(4f / 3f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ShaderControls(
+                activeEffect = uiState.activeEffect,
+                onEffectSelected = { viewModel.setActiveEffect(it) },
+                onParameterChanged = { index, value -> viewModel.updateEffectParameter(index, value) },
+                onClearEffect = { viewModel.setActiveEffect(null) }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}

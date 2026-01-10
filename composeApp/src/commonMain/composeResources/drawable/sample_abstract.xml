@@ -1,0 +1,93 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="300dp"
+    android:viewportWidth="400"
+    android:viewportHeight="300">
+    
+    <!-- Background -->
+    <path
+        android:fillColor="#1A1A2E"
+        android:pathData="M0,0 L400,0 L400,300 L0,300 Z" />
+    
+    <!-- Large circle 1 -->
+    <path
+        android:fillColor="#E94560"
+        android:pathData="M100,150 m-80,0 a80,80 0 1,1 160,0 a80,80 0 1,1 -160,0" />
+    
+    <!-- Large circle 2 -->
+    <path
+        android:fillColor="#0F3460"
+        android:fillAlpha="0.8"
+        android:pathData="M200,120 m-70,0 a70,70 0 1,1 140,0 a70,70 0 1,1 -140,0" />
+    
+    <!-- Large circle 3 -->
+    <path
+        android:fillColor="#533483"
+        android:pathData="M320,180 m-90,0 a90,90 0 1,1 180,0 a90,90 0 1,1 -180,0" />
+    
+    <!-- Overlapping shapes -->
+    <path
+        android:fillColor="#16C79A"
+        android:fillAlpha="0.7"
+        android:pathData="M150,200 m-50,0 a50,50 0 1,1 100,0 a50,50 0 1,1 -100,0" />
+    
+    <!-- Triangle -->
+    <path
+        android:fillColor="#FFD700"
+        android:fillAlpha="0.8"
+        android:pathData="M280,50 L330,130 L230,130 Z" />
+    
+    <!-- Small decorative circles -->
+    <path
+        android:fillColor="#FF6B6B"
+        android:pathData="M50,50 m-15,0 a15,15 0 1,1 30,0 a15,15 0 1,1 -30,0" />
+    <path
+        android:fillColor="#4ECDC4"
+        android:pathData="M380,40 m-12,0 a12,12 0 1,1 24,0 a12,12 0 1,1 -24,0" />
+    <path
+        android:fillColor="#F7DC6F"
+        android:pathData="M30,250 m-18,0 a18,18 0 1,1 36,0 a18,18 0 1,1 -36,0" />
+    <path
+        android:fillColor="#BB8FCE"
+        android:pathData="M370,280 m-10,0 a10,10 0 1,1 20,0 a10,10 0 1,1 -20,0" />
+    
+    <!-- Lines -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeAlpha="0.3"
+        android:pathData="M0,100 L400,100" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeAlpha="0.3"
+        android:pathData="M0,200 L400,200" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeAlpha="0.3"
+        android:pathData="M100,0 L100,300" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeAlpha="0.3"
+        android:pathData="M300,0 L300,300" />
+    
+    <!-- Wavy line -->
+    <path
+        android:strokeColor="#E94560"
+        android:strokeWidth="3"
+        android:pathData="M0,280 Q50,260 100,280 Q150,300 200,280 Q250,260 300,280 Q350,300 400,280" />
+    
+    <!-- Diamond -->
+    <path
+        android:fillColor="#00D9FF"
+        android:fillAlpha="0.6"
+        android:pathData="M350,150 L380,180 L350,210 L320,180 Z" />
+    
+    <!-- Star shape -->
+    <path
+        android:fillColor="#FFE66D"
+        android:pathData="M70,100 L75,115 L90,115 L78,125 L83,140 L70,130 L57,140 L62,125 L50,115 L65,115 Z" />
+</vector>
+
