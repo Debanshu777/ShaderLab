@@ -50,9 +50,13 @@ import com.debanshu.shaderlab.imagelib.ExportResult
 import com.debanshu.shaderlab.imagelib.PickResult
 import com.debanshu.shaderlab.imagelib.createImageExporter
 import com.debanshu.shaderlab.imagelib.rememberImagePickerLauncher
+import com.debanshu.shaderlab.shaderlib.applyShaderToImage
+import com.debanshu.shaderlab.shaderlib.areShadersSupported
 import com.debanshu.shaderlab.viewmodel.ImageSource
 import com.debanshu.shaderlab.viewmodel.ShaderLabViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -149,15 +153,25 @@ fun ShaderLabContent(
                         onClick = {
                             scope.launch {
                                 val selectedImage = uiState.selectedImage
+                                val activeEffect = uiState.activeEffect
                                 when (selectedImage) {
                                     is ImageSource.Picked -> {
-                                        val bytes = selectedImage.bytes
-                                        if (bytes != null) {
+                                        val originalBytes = selectedImage.bytes
+                                        if (originalBytes != null) {
                                             val exporter = createImageExporter()
                                             if (exporter.isSupported) {
+                                                // Apply shader effect if active and supported
+                                                val bytesToExport = if (activeEffect != null && areShadersSupported()) {
+                                                    withContext(Dispatchers.Default) {
+                                                        applyShaderToImage(originalBytes, activeEffect)
+                                                    } ?: originalBytes
+                                                } else {
+                                                    originalBytes
+                                                }
+                                                
                                                 val config = ExportConfig()
                                                 val fileName = "shaderlab_${Random.nextInt(100000, 999999)}"
-                                                when (val result = exporter.exportImage(bytes, fileName, config)) {
+                                                when (val result = exporter.exportImage(bytesToExport, fileName, config)) {
                                                     is ExportResult.Success -> {
                                                         snackbarHostState.showSnackbar("Image saved successfully!")
                                                     }
