@@ -8,6 +8,7 @@ plugins {
 }
 
 kotlin {
+    applyDefaultHierarchyTemplate()
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
@@ -32,11 +33,23 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.ui)
         }
+        val skiaMain by creating {
+            dependsOn(commonMain.get())
+        }
+
+        iosMain {
+            dependsOn(skiaMain)
+        }
+
+        jvmMain {
+            dependsOn(skiaMain)
+            dependencies {
+                implementation(compose.desktop.currentOs)
+            }
+        }
+        
         androidMain.dependencies {
             implementation(compose.preview)
-        }
-        jvmMain.dependencies {
-            implementation(compose.desktop.currentOs)
         }
     }
 }
