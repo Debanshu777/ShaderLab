@@ -9,19 +9,25 @@ import android.graphics.RuntimeShader
 import android.graphics.Shader
 import java.io.ByteArrayOutputStream
 
-actual fun applyShaderToImage(imageBytes: ByteArray, effect: ShaderEffectType): ByteArray? {
+actual fun applyShaderToImage(
+    imageBytes: ByteArray,
+    spec: ShaderSpec,
+    width: Float,
+    height: Float
+): ByteArray? {
     return try {
         val sourceBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
             ?: return null
         
-        val width = sourceBitmap.width
-        val height = sourceBitmap.height
+        val imageWidth = sourceBitmap.width
+        val imageHeight = sourceBitmap.height
 
-        val resultBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val effectWidth = if (width > 0) width else imageWidth.toFloat()
+        val effectHeight = if (height > 0) height else imageHeight.toFloat()
 
-        val source = effect.toShaderSource(width.toFloat(), height.toFloat())
+        val resultBitmap = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888)
 
-        val success = applyWithRuntimeShader(sourceBitmap, resultBitmap, source, width, height)
+        val success = applyWithRuntimeShader(sourceBitmap, resultBitmap, spec, effectWidth, effectHeight)
         
         if (!success) {
             sourceBitmap.recycle()
@@ -45,15 +51,15 @@ actual fun applyShaderToImage(imageBytes: ByteArray, effect: ShaderEffectType): 
 private fun applyWithRuntimeShader(
     source: Bitmap,
     result: Bitmap,
-    shaderSource: ShaderSource,
-    width: Int,
-    height: Int
+    spec: ShaderSpec,
+    width: Float,
+    height: Float
 ): Boolean {
     return try {
-        val renderEffect = createRenderEffect(shaderSource)
+        val renderEffect = createRenderEffectFromSpec(spec, width, height)
 
         val node = RenderNode("effect")
-        node.setPosition(0, 0, width, height)
+        node.setPosition(0, 0, source.width, source.height)
         node.setRenderEffect(renderEffect)
         
         val canvas = node.beginRecording()
@@ -74,20 +80,19 @@ private fun applyWithRuntimeShader(
     }
 }
 
-private fun createRenderEffect(source: ShaderSource): RenderEffect {
-    if (source is ShaderSource.Blur) {
-        val radiusPx = source.radius.coerceAtLeast(0.1f)
+private fun createRenderEffectFromSpec(spec: ShaderSpec, width: Float, height: Float): RenderEffect {
+    if (spec is NativeBlurSpec) {
+        val radiusPx = spec.radius.coerceAtLeast(0.1f)
         return RenderEffect.createBlurEffect(radiusPx, radiusPx, Shader.TileMode.CLAMP)
     }
     
-    val shader = RuntimeShader(source.code)
+    val shader = RuntimeShader(spec.shaderCode)
+    val uniforms = spec.buildUniforms(width, height)
     
-    source.uniforms.forEach { uniform ->
+    uniforms.forEach { uniform ->
         when (uniform) {
-            is UniformSpec.Float1 -> shader.setFloatUniform(uniform.name, uniform.value)
-            is UniformSpec.Float2 -> shader.setFloatUniform(uniform.name, uniform.x, uniform.y)
-            is UniformSpec.Float3 -> shader.setFloatUniform(uniform.name, uniform.x, uniform.y, uniform.z)
-            is UniformSpec.Float4 -> shader.setFloatUniform(uniform.name, uniform.x, uniform.y, uniform.z, uniform.w)
+            is UniformSpec.Floats -> shader.setFloatUniform(uniform.name, uniform.values)
+            is UniformSpec.Ints -> shader.setIntUniform(uniform.name, uniform.values)
         }
     }
     

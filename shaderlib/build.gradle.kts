@@ -47,10 +47,6 @@ kotlin {
                 implementation(compose.desktop.currentOs)
             }
         }
-        
-        androidMain.dependencies {
-            implementation(compose.preview)
-        }
     }
 }
 

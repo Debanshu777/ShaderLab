@@ -7,14 +7,15 @@ import androidx.compose.ui.graphics.RenderEffect
 import androidx.compose.ui.graphics.asComposeRenderEffect
 
 internal object AGSLShaderFactory {
-    fun createEffect(source: ShaderSource): RenderEffect {
-        if (source is ShaderSource.Blur) {
-            return createNativeBlur(source.radius)
+    fun createEffect(spec: ShaderSpec, width: Float, height: Float): RenderEffect {
+        if (spec is NativeBlurSpec) {
+            return createNativeBlur(spec.radius)
         }
         
-        val shader = RuntimeShader(source.code)
-
-        applyUniforms(shader, source.uniforms)
+        val shader = RuntimeShader(spec.shaderCode)
+        val uniforms = spec.buildUniforms(width, height)
+        
+        applyUniforms(shader, uniforms)
         
         return AndroidRenderEffect.createRuntimeShaderEffect(shader, "content")
             .asComposeRenderEffect()
@@ -29,10 +30,8 @@ internal object AGSLShaderFactory {
     private fun applyUniforms(shader: RuntimeShader, uniforms: List<UniformSpec>) {
         uniforms.forEach { uniform ->
             when (uniform) {
-                is UniformSpec.Float1 -> shader.setFloatUniform(uniform.name, uniform.value)
-                is UniformSpec.Float2 -> shader.setFloatUniform(uniform.name, uniform.x, uniform.y)
-                is UniformSpec.Float3 -> shader.setFloatUniform(uniform.name, uniform.x, uniform.y, uniform.z)
-                is UniformSpec.Float4 -> shader.setFloatUniform(uniform.name, uniform.x, uniform.y, uniform.z, uniform.w)
+                is UniformSpec.Floats -> shader.setFloatUniform(uniform.name, uniform.values)
+                is UniformSpec.Ints -> shader.setIntUniform(uniform.name, uniform.values)
             }
         }
     }

@@ -6,7 +6,8 @@ import com.debanshu.shaderlab.imagelib.ExportConfig
 import com.debanshu.shaderlab.imagelib.ExportResult
 import com.debanshu.shaderlab.imagelib.ImageExporter
 import com.debanshu.shaderlab.imagelib.PickResult
-import com.debanshu.shaderlab.shaderlib.ShaderEffectType
+import com.debanshu.shaderlab.shaderlib.AnimatableShaderSpec
+import com.debanshu.shaderlab.shaderlib.ShaderSpec
 import com.debanshu.shaderlab.shaderlib.areShadersSupported
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,7 +51,7 @@ sealed class ImageSource {
  */
 data class ShaderLabUiState(
     val selectedImage: ImageSource = ImageSource.Bundled("sample_landscape"),
-    val activeEffect: ShaderEffectType? = null,
+    val activeEffect: ShaderSpec? = null,
     val showBeforeAfter: Boolean = false,
     val isDarkTheme: Boolean = true,
     val sampleImages: List<String> = listOf(
@@ -86,17 +87,17 @@ class ShaderLabViewModel : ViewModel() {
     /**
      * Set the active shader effect.
      */
-    fun setActiveEffect(effect: ShaderEffectType?) {
+    fun setActiveEffect(effect: ShaderSpec?) {
         _uiState.update { it.copy(activeEffect = effect) }
     }
     
     /**
-     * Update a parameter of the active effect.
+     * Update a parameter of the active effect by parameter ID.
      */
-    fun updateEffectParameter(parameterIndex: Int, value: Float) {
+    fun updateEffectParameter(parameterId: String, value: Float) {
         _uiState.update { state ->
             val currentEffect = state.activeEffect ?: return@update state
-            val updatedEffect = currentEffect.withParameter(parameterIndex, value)
+            val updatedEffect = currentEffect.withParameterValue(parameterId, value)
             state.copy(activeEffect = updatedEffect)
         }
     }
@@ -144,7 +145,7 @@ class ShaderLabViewModel : ViewModel() {
     fun updateAnimationTime(time: Float) {
         _uiState.update { state ->
             val currentEffect = state.activeEffect
-            if (currentEffect is ShaderEffectType.WaveDistortion && currentEffect.animate) {
+            if (currentEffect is AnimatableShaderSpec && currentEffect.isAnimating) {
                 state.copy(
                     animationTime = time,
                     activeEffect = currentEffect.withTime(time)
@@ -196,4 +197,3 @@ class ShaderLabViewModel : ViewModel() {
         _uiState.update { it.copy(shadersSupported = supported) }
     }
 }
-

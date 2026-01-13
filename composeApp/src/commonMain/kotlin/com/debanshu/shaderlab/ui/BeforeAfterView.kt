@@ -37,7 +37,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.debanshu.shaderlab.imagelib.decodeImageBytes
-import com.debanshu.shaderlab.shaderlib.ShaderEffectType
+import com.debanshu.shaderlab.shaderlib.AnimatableShaderSpec
+import com.debanshu.shaderlab.shaderlib.ShaderSpec
 import com.debanshu.shaderlab.shaderlib.areShadersSupported
 import com.debanshu.shaderlab.shaderlib.createShaderEffect
 import com.debanshu.shaderlab.ui.components.SampleImage
@@ -47,16 +48,16 @@ import kotlin.math.roundToInt
 @Composable
 fun BeforeAfterView(
     imageSource: ImageSource,
-    effect: ShaderEffectType?,
+    effect: ShaderSpec?,
     onWaveTimeUpdate: (Float) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var containerWidth by remember { mutableFloatStateOf(0f) }
     var containerHeight by remember { mutableFloatStateOf(0f) }
     var dividerPosition by remember { mutableFloatStateOf(0.5f) }
-    
-    val waveEffect = effect as? ShaderEffectType.WaveDistortion
-    val shouldAnimate = waveEffect?.animate == true
+
+    val animatableEffect = effect as? AnimatableShaderSpec
+    val shouldAnimate = animatableEffect?.isAnimating == true
     
     val infiniteTransition = rememberInfiniteTransition(label = "wave")
     val animatedTime by infiniteTransition.animateFloat(
@@ -93,7 +94,6 @@ fun BeforeAfterView(
                 containerHeight = size.height.toFloat()
             }
     ) {
-        // "After" side - with effect (full image as base layer)
         ImageContent(
             imageSource = imageSource,
             renderEffect = renderEffect,

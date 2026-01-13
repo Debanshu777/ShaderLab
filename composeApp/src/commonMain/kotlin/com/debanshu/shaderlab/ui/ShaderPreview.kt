@@ -29,7 +29,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import com.debanshu.shaderlab.imagelib.decodeImageBytes
-import com.debanshu.shaderlab.shaderlib.ShaderEffectType
+import com.debanshu.shaderlab.shaderlib.AnimatableShaderSpec
+import com.debanshu.shaderlab.shaderlib.ShaderSpec
 import com.debanshu.shaderlab.shaderlib.areShadersSupported
 import com.debanshu.shaderlab.shaderlib.createShaderEffect
 import com.debanshu.shaderlab.ui.components.SampleImage
@@ -38,18 +39,18 @@ import com.debanshu.shaderlab.viewmodel.ImageSource
 @Composable
 fun ShaderPreview(
     imageSource: ImageSource,
-    effect: ShaderEffectType?,
+    effect: ShaderSpec?,
     onWaveTimeUpdate: (Float) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var contentWidth by remember { mutableFloatStateOf(0f) }
     var contentHeight by remember { mutableFloatStateOf(0f) }
     
-    // Handle wave animation
-    val waveEffect = effect as? ShaderEffectType.WaveDistortion
-    val shouldAnimate = waveEffect?.animate == true
+    // Handle animation for animatable shaders
+    val animatableEffect = effect as? AnimatableShaderSpec
+    val shouldAnimate = animatableEffect?.isAnimating == true
     
-    // Animation for wave distortion
+    // Animation for wave distortion and other animatable effects
     val infiniteTransition = rememberInfiniteTransition(label = "wave")
     val animatedTime by infiniteTransition.animateFloat(
         initialValue = 0f,

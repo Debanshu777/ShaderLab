@@ -1,49 +1,49 @@
 package com.debanshu.shaderlab.shaderlib
 
-/**
- * Represents a shader uniform specification with type-safe value binding.
- * This abstraction allows factories to apply uniforms generically without
- * knowing the specific shader implementation details.
- */
 sealed class UniformSpec {
     abstract val name: String
-    
-    /**
-     * A single float uniform value.
-     */
-    data class Float1(
-        override val name: String,
-        val value: Float
-    ) : UniformSpec()
-    
-    /**
-     * A float2/vec2 uniform value (e.g., resolution, offset).
-     */
-    data class Float2(
-        override val name: String,
-        val x: Float,
-        val y: Float
-    ) : UniformSpec()
-    
-    /**
-     * A float3/vec3 uniform value (e.g., color RGB).
-     */
-    data class Float3(
-        override val name: String,
-        val x: Float,
-        val y: Float,
-        val z: Float
-    ) : UniformSpec()
-    
-    /**
-     * A float4/vec4 uniform value (e.g., color RGBA).
-     */
-    data class Float4(
-        override val name: String,
-        val x: Float,
-        val y: Float,
-        val z: Float,
-        val w: Float
-    ) : UniformSpec()
-}
 
+    data class Floats(
+        override val name: String,
+        val values: FloatArray
+    ) : UniformSpec() {
+        constructor(name: String, v1: Float) : this(name, floatArrayOf(v1))
+        constructor(name: String, v1: Float, v2: Float) : this(name, floatArrayOf(v1, v2))
+        constructor(name: String, v1: Float, v2: Float, v3: Float) : this(name, floatArrayOf(v1, v2, v3))
+        constructor(name: String, v1: Float, v2: Float, v3: Float, v4: Float) : this(name, floatArrayOf(v1, v2, v3, v4))
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Floats) return false
+            return name == other.name && values.contentEquals(other.values)
+        }
+
+        override fun hashCode(): Int {
+            var result = name.hashCode()
+            result = 31 * result + values.contentHashCode()
+            return result
+        }
+    }
+
+    data class Ints(
+        override val name: String,
+        val values: IntArray
+    ) : UniformSpec() {
+        constructor(name: String, v1: Int) : this(name, intArrayOf(v1))
+        constructor(name: String, v1: Int, v2: Int) : this(name, intArrayOf(v1, v2))
+        constructor(name: String, v1: Int, v2: Int, v3: Int) : this(name, intArrayOf(v1, v2, v3))
+        constructor(name: String, v1: Int, v2: Int, v3: Int, v4: Int) : this(name, intArrayOf(v1, v2, v3, v4))
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Ints) return false
+            return name == other.name && values.contentEquals(other.values)
+        }
+
+        override fun hashCode(): Int {
+            var result = name.hashCode()
+            result = 31 * result + values.contentHashCode()
+            return result
+        }
+    }
+}

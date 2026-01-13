@@ -38,8 +38,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.debanshu.shaderlab.shaderlib.EffectParameter
-import com.debanshu.shaderlab.shaderlib.ShaderEffectType
+import com.debanshu.shaderlab.shaderlib.ShaderParameter
+import com.debanshu.shaderlab.shaderlib.ShaderSpec
+import com.debanshu.shaderlab.shaderlib.ShaderRegistry
 
 /**
  * Shader effect controls component.
@@ -47,14 +48,14 @@ import com.debanshu.shaderlab.shaderlib.ShaderEffectType
  * 
  * @param activeEffect The currently active shader effect
  * @param onEffectSelected Called when an effect is selected
- * @param onParameterChanged Called when a parameter value changes (effect, paramIndex, newValue)
+ * @param onParameterChanged Called when a parameter value changes (parameterId, newValue)
  * @param onClearEffect Called when the effect should be cleared
  */
 @Composable
 fun ShaderControls(
-    activeEffect: ShaderEffectType?,
-    onEffectSelected: (ShaderEffectType) -> Unit,
-    onParameterChanged: (Int, Float) -> Unit,
+    activeEffect: ShaderSpec?,
+    onEffectSelected: (ShaderSpec) -> Unit,
+    onParameterChanged: (String, Float) -> Unit,
     onClearEffect: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -118,7 +119,7 @@ fun ShaderControls(
                 activeEffect?.parameters?.forEachIndexed { index, parameter ->
                     EffectParameterControl(
                         parameter = parameter,
-                        onValueChange = { value -> onParameterChanged(index, value) }
+                        onValueChange = { value -> onParameterChanged(parameter.id, value) }
                     )
                     if (index < activeEffect.parameters.lastIndex) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -148,15 +149,15 @@ fun ShaderControls(
  */
 @Composable
 private fun EffectParameterControl(
-    parameter: EffectParameter,
+    parameter: ShaderParameter,
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
     when (parameter) {
-        is EffectParameter.ToggleParam -> {
+        is ShaderParameter.ToggleParam -> {
             ToggleControl(
                 label = parameter.label,
-                isEnabled = parameter.isEnabled,
+                isEnabled = parameter.defaultValue > 0.5f,
                 onToggle = { enabled -> onValueChange(if (enabled) 1f else 0f) },
                 modifier = modifier
             )
@@ -164,8 +165,8 @@ private fun EffectParameterControl(
         else -> {
             SliderControl(
                 label = parameter.label,
-                value = parameter.currentValue,
-                valueRange = parameter.valueRange,
+                value = parameter.defaultValue,
+                valueRange = parameter.range,
                 onValueChange = onValueChange,
                 formatValue = parameter.formatValue,
                 modifier = modifier
@@ -244,11 +245,11 @@ private fun ToggleControl(
 
 @Composable
 private fun EffectChipRow(
-    activeEffect: ShaderEffectType?,
-    onEffectSelected: (ShaderEffectType) -> Unit,
+    activeEffect: ShaderSpec?,
+    onEffectSelected: (ShaderSpec) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val effects = ShaderEffectType.allEffects()
+    val effects = ShaderRegistry.getAll()
     
     LazyRow(
         modifier = modifier,
@@ -258,7 +259,7 @@ private fun EffectChipRow(
         items(effects) { effect ->
             EffectChip(
                 effect = effect,
-                isSelected = activeEffect?.displayName == effect.displayName,
+                isSelected = activeEffect?.id == effect.id,
                 onClick = { onEffectSelected(effect) }
             )
         }
@@ -267,7 +268,7 @@ private fun EffectChipRow(
 
 @Composable
 private fun EffectChip(
-    effect: ShaderEffectType,
+    effect: ShaderSpec,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier

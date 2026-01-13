@@ -8,15 +8,16 @@ import org.jetbrains.skia.RuntimeEffect
 import org.jetbrains.skia.RuntimeShaderBuilder
 
 internal object SkiaShaderFactory {
-    fun createEffect(source: ShaderSource): RenderEffect {
-        if (source is ShaderSource.Blur) {
-            return createNativeBlur(source.radius)
+    fun createEffect(spec: ShaderSpec, width: Float, height: Float): RenderEffect {
+        if (spec is NativeBlurSpec) {
+            return createNativeBlur(spec.radius)
         }
 
-        val effect = RuntimeEffect.makeForShader(source.code)
+        val effect = RuntimeEffect.makeForShader(spec.shaderCode)
         val builder = RuntimeShaderBuilder(effect)
+        val uniforms = spec.buildUniforms(width, height)
 
-        applyUniforms(builder, source.uniforms)
+        applyUniforms(builder, uniforms)
         
         return ImageFilter.makeRuntimeShader(builder, "content", null)
             .asComposeRenderEffect()
@@ -31,10 +32,8 @@ internal object SkiaShaderFactory {
     private fun applyUniforms(builder: RuntimeShaderBuilder, uniforms: List<UniformSpec>) {
         uniforms.forEach { uniform ->
             when (uniform) {
-                is UniformSpec.Float1 -> builder.uniform(uniform.name, uniform.value)
-                is UniformSpec.Float2 -> builder.uniform(uniform.name, uniform.x, uniform.y)
-                is UniformSpec.Float3 -> builder.uniform(uniform.name, uniform.x, uniform.y, uniform.z)
-                is UniformSpec.Float4 -> builder.uniform(uniform.name, uniform.x, uniform.y, uniform.z, uniform.w)
+                is UniformSpec.Floats -> builder.uniform(uniform.name, uniform.values)
+                is UniformSpec.Ints -> builder.uniform(uniform.name, uniform.values.first())
             }
         }
     }

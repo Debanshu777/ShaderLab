@@ -10,18 +10,19 @@ import org.jetbrains.skia.RuntimeShaderBuilder
 import org.jetbrains.skia.Surface
 
 internal object SkiaImageProcessor {
-    fun process(imageBytes: ByteArray, effect: ShaderEffectType): ByteArray? {
+    fun process(imageBytes: ByteArray, spec: ShaderSpec, width: Float, height: Float): ByteArray? {
         return try {
             val image = Image.makeFromEncoded(imageBytes)
-            val width = image.width
-            val height = image.height
+            val imageWidth = image.width
+            val imageHeight = image.height
 
-            val source = effect.toShaderSource(width.toFloat(), height.toFloat())
+            val effectWidth = if (width > 0) width else imageWidth.toFloat()
+            val effectHeight = if (height > 0) height else imageHeight.toFloat()
 
-            val imageFilter = createImageFilter(source)
+            val imageFilter = createImageFilter(spec, effectWidth, effectHeight)
                 ?: return imageBytes
 
-            val surface = Surface.makeRasterN32Premul(width, height)
+            val surface = Surface.makeRasterN32Premul(imageWidth, imageHeight)
             val canvas = surface.canvas
 
             val paint = Paint().apply {
@@ -38,16 +39,17 @@ internal object SkiaImageProcessor {
         }
     }
 
-    private fun createImageFilter(source: ShaderSource): ImageFilter? {
-        if (source is ShaderSource.Blur) {
-            val radiusPx = source.radius.coerceAtLeast(0.1f)
+    private fun createImageFilter(spec: ShaderSpec, width: Float, height: Float): ImageFilter? {
+        if (spec is NativeBlurSpec) {
+            val radiusPx = spec.radius.coerceAtLeast(0.1f)
             return ImageFilter.makeBlur(radiusPx, radiusPx, FilterTileMode.CLAMP)
         }
 
-        val runtimeEffect = RuntimeEffect.makeForShader(source.code)
+        val runtimeEffect = RuntimeEffect.makeForShader(spec.shaderCode)
         val builder = RuntimeShaderBuilder(runtimeEffect)
+        val uniforms = spec.buildUniforms(width, height)
 
-        applyUniforms(builder, source.uniforms)
+        applyUniforms(builder, uniforms)
         
         return ImageFilter.makeRuntimeShader(builder, "content", null)
     }
@@ -55,10 +57,8 @@ internal object SkiaImageProcessor {
     private fun applyUniforms(builder: RuntimeShaderBuilder, uniforms: List<UniformSpec>) {
         uniforms.forEach { uniform ->
             when (uniform) {
-                is UniformSpec.Float1 -> builder.uniform(uniform.name, uniform.value)
-                is UniformSpec.Float2 -> builder.uniform(uniform.name, uniform.x, uniform.y)
-                is UniformSpec.Float3 -> builder.uniform(uniform.name, uniform.x, uniform.y, uniform.z)
-                is UniformSpec.Float4 -> builder.uniform(uniform.name, uniform.x, uniform.y, uniform.z, uniform.w)
+                is UniformSpec.Floats -> builder.uniform(uniform.name, uniform.values)
+                is UniformSpec.Ints -> builder.uniform(uniform.name, uniform.values.first())
             }
         }
     }

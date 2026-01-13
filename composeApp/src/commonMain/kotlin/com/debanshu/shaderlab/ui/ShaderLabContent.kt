@@ -272,7 +272,7 @@ fun ShaderLabContent(
             ShaderControls(
                 activeEffect = uiState.activeEffect,
                 onEffectSelected = { viewModel.setActiveEffect(it) },
-                onParameterChanged = { index, value -> viewModel.updateEffectParameter(index, value) },
+                onParameterChanged = { parameterId, value -> viewModel.updateEffectParameter(parameterId, value) },
                 onClearEffect = { viewModel.setActiveEffect(null) }
             )
 
