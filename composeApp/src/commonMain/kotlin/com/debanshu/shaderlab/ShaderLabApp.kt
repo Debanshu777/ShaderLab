@@ -5,8 +5,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.debanshu.shaderlab.shaderlib.areShadersSupported
 import com.debanshu.shaderlab.shaderlib.ShaderRegistry
+import com.debanshu.shaderlab.shaderlib.areShadersSupported
 import com.debanshu.shaderlab.shaders.BlurShader
 import com.debanshu.shaderlab.shaders.ChromaticAberrationShader
 import com.debanshu.shaderlab.shaders.ColorInversionShader
@@ -29,7 +29,7 @@ private val shadersInitialized: Boolean by lazy {
             BlurShader(),
             PixelationShader(),
             ChromaticAberrationShader(),
-            WaveDistortionShader()
+            WaveDistortionShader(),
         )
     }
     true
@@ -40,14 +40,14 @@ fun ShaderLabApp() {
     shadersInitialized
     val viewModel: ShaderLabViewModel = viewModel { ShaderLabViewModel() }
     val uiState by viewModel.uiState.collectAsState()
-    
+
     LaunchedEffect(Unit) {
         viewModel.setShadersSupported(areShadersSupported())
     }
-    
+
     ShaderLabTheme(darkTheme = uiState.isDarkTheme) {
         ShaderLabContent(
-            viewModel = viewModel
+            viewModel = viewModel,
         )
     }
 }

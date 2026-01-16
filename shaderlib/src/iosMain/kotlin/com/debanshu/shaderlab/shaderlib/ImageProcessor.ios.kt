@@ -4,7 +4,5 @@ actual fun applyShaderToImage(
     imageBytes: ByteArray,
     spec: ShaderSpec,
     width: Float,
-    height: Float
-): ByteArray? {
-    return SkiaImageProcessor.process(imageBytes, spec, width, height)
-}
+    height: Float,
+): ByteArray? = SkiaImageProcessor.process(imageBytes, spec, width, height)

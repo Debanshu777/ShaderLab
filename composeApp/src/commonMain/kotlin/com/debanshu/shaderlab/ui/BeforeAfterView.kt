@@ -50,7 +50,7 @@ fun BeforeAfterView(
     imageSource: ImageSource,
     effect: ShaderSpec?,
     onWaveTimeUpdate: (Float) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var containerWidth by remember { mutableFloatStateOf(0f) }
     var containerHeight by remember { mutableFloatStateOf(0f) }
@@ -58,147 +58,147 @@ fun BeforeAfterView(
 
     val animatableEffect = effect as? AnimatableShaderSpec
     val shouldAnimate = animatableEffect?.isAnimating == true
-    
+
     val infiniteTransition = rememberInfiniteTransition(label = "wave")
     val animatedTime by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 10f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(10000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "waveTime"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(10000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "waveTime",
     )
-    
+
     LaunchedEffect(shouldAnimate, animatedTime) {
         if (shouldAnimate) {
             onWaveTimeUpdate(animatedTime)
         }
     }
 
-    val renderEffect = remember(effect, containerWidth, containerHeight) {
-        if (effect != null && containerWidth > 0 && containerHeight > 0 && areShadersSupported()) {
-            createShaderEffect(effect, containerWidth, containerHeight)
-        } else {
-            null
-        }
-    }
-    
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .onSizeChanged { size ->
-                containerWidth = size.width.toFloat()
-                containerHeight = size.height.toFloat()
+    val renderEffect =
+        remember(effect, containerWidth, containerHeight) {
+            if (effect != null && containerWidth > 0 && containerHeight > 0 && areShadersSupported()) {
+                createShaderEffect(effect, containerWidth, containerHeight)
+            } else {
+                null
             }
+        }
+
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .onSizeChanged { size ->
+                    containerWidth = size.width.toFloat()
+                    containerHeight = size.height.toFloat()
+                },
     ) {
         ImageContent(
             imageSource = imageSource,
             renderEffect = renderEffect,
             contentDescription = "After - with effect",
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         )
-
-        // "Before" side - original (clipped overlay on top using graphicsLayer)
         Box(
-            modifier = Modifier
-                .matchParentSize()
-                .graphicsLayer {
-                    clip = true
-                    shape = GenericShape { size, _ ->
-                        addRect(Rect(0f, 0f, size.width * dividerPosition, size.height))
-                    }
-                }
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        clip = true
+                        shape =
+                            GenericShape { size, _ ->
+                                addRect(Rect(0f, 0f, size.width * dividerPosition, size.height))
+                            }
+                    },
         ) {
             ImageContent(
                 imageSource = imageSource,
                 renderEffect = null,
                 contentDescription = "Before - original",
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             )
         }
 
-        // Divider line
         Box(
-            modifier = Modifier
-                .offset { IntOffset((containerWidth * dividerPosition).roundToInt() - 2, 0) }
-                .width(4.dp)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.primary)
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures { change, dragAmount ->
-                        change.consume()
-                        val newPosition = dividerPosition + (dragAmount / containerWidth)
-                        dividerPosition = newPosition.coerceIn(0.05f, 0.95f)
-                    }
-                }
+            modifier =
+                Modifier
+                    .offset { IntOffset((containerWidth * dividerPosition).roundToInt() - 2, 0) }
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.primary)
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures { change, dragAmount ->
+                            change.consume()
+                            val newPosition = dividerPosition + (dragAmount / containerWidth)
+                            dividerPosition = newPosition.coerceIn(0.05f, 0.95f)
+                        }
+                    },
         )
 
-        // Divider handle
         Box(
-            modifier = Modifier
-                .offset { 
-                    IntOffset(
-                        (containerWidth * dividerPosition).roundToInt() - 16,
-                        (containerHeight / 2).roundToInt() - 24
-                    ) 
-                }
-                .width(32.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .padding(vertical = 12.dp)
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures { change, dragAmount ->
-                        change.consume()
-                        val newPosition = dividerPosition + (dragAmount / containerWidth)
-                        dividerPosition = newPosition.coerceIn(0.05f, 0.95f)
-                    }
-                },
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .offset {
+                        IntOffset(
+                            (containerWidth * dividerPosition).roundToInt() - 16,
+                            (containerHeight / 2).roundToInt() - 24,
+                        )
+                    }.width(32.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(16.dp),
+                    ).padding(vertical = 12.dp)
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures { change, dragAmount ->
+                            change.consume()
+                            val newPosition = dividerPosition + (dragAmount / containerWidth)
+                            dividerPosition = newPosition.coerceIn(0.05f, 0.95f)
+                        }
+                    },
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = "⟷",
                 color = MaterialTheme.colorScheme.onPrimary,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
             )
         }
 
-        // Labels
         Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(12.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(horizontal = 10.dp, vertical = 6.dp)
+            modifier =
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                        shape = RoundedCornerShape(8.dp),
+                    ).padding(horizontal = 10.dp, vertical = 6.dp),
         ) {
             Text(
                 text = "Before",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
-        
+
         Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(12.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(horizontal = 10.dp, vertical = 6.dp)
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+                        shape = RoundedCornerShape(8.dp),
+                    ).padding(horizontal = 10.dp, vertical = 6.dp),
         ) {
             Text(
                 text = "After",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
     }
@@ -209,44 +209,48 @@ private fun ImageContent(
     imageSource: ImageSource,
     renderEffect: androidx.compose.ui.graphics.RenderEffect?,
     contentDescription: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     when (imageSource) {
         is ImageSource.Bundled -> {
             Box(
-                modifier = modifier.graphicsLayer {
-                    this.renderEffect = renderEffect
-                }
+                modifier =
+                    modifier.graphicsLayer {
+                        this.renderEffect = renderEffect
+                    },
             ) {
                 SampleImage(
                     resourceName = imageSource.resourceName,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
+                    contentScale = ContentScale.Fit,
                 )
             }
         }
+
         is ImageSource.Picked -> {
-            val imageBitmap = remember(imageSource.bytes) {
-                imageSource.bytes?.let { decodeImageBytes(it) }
-            }
+            val imageBitmap =
+                remember(imageSource.bytes) {
+                    imageSource.bytes?.let { decodeImageBytes(it) }
+                }
             if (imageBitmap != null) {
                 Image(
                     bitmap = imageBitmap,
                     contentDescription = contentDescription,
-                    modifier = modifier.graphicsLayer {
-                        this.renderEffect = renderEffect
-                    },
-                    contentScale = ContentScale.Fit
+                    modifier =
+                        modifier.graphicsLayer {
+                            this.renderEffect = renderEffect
+                        },
+                    contentScale = ContentScale.Fit,
                 )
             } else {
                 Box(
                     modifier = modifier.background(MaterialTheme.colorScheme.errorContainer),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "Unable to load image",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer
+                        color = MaterialTheme.colorScheme.onErrorContainer,
                     )
                 }
             }

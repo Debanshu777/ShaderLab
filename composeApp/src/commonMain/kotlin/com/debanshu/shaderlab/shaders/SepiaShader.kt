@@ -4,18 +4,13 @@ import com.debanshu.shaderlab.shaderlib.ShaderParameter
 import com.debanshu.shaderlab.shaderlib.ShaderSpec
 import com.debanshu.shaderlab.shaderlib.UniformSpec
 
-/**
- * Sepia shader effect.
- * Applies a warm sepia tone to the image.
- */
 data class SepiaShader(
-    private val intensity: Float = 1f
+    private val intensity: Float = 1f,
 ) : ShaderSpec {
-    
     override val id: String = "sepia"
-    
+
     override val displayName: String = "Sepia"
-    
+
     override val shaderCode: String = """
         uniform shader content;
         uniform float intensity;
@@ -33,24 +28,30 @@ data class SepiaShader(
             return half4(result, color.a);
         }
     """
-    
-    override val parameters: List<ShaderParameter> = listOf(
-        ShaderParameter.PercentageParam(
-            id = "intensity",
-            label = "Intensity",
-            defaultValue = intensity
+
+    override val parameters: List<ShaderParameter> =
+        listOf(
+            ShaderParameter.PercentageParam(
+                id = "intensity",
+                label = "Intensity",
+                defaultValue = intensity,
+            ),
         )
-    )
-    
-    override fun buildUniforms(width: Float, height: Float): List<UniformSpec> = listOf(
-        UniformSpec.Floats("intensity", intensity)
-    )
-    
-    override fun withParameterValue(parameterId: String, value: Float): ShaderSpec {
-        return when (parameterId) {
+
+    override fun buildUniforms(
+        width: Float,
+        height: Float,
+    ): List<UniformSpec> =
+        listOf(
+            UniformSpec.Floats("intensity", intensity),
+        )
+
+    override fun withParameterValue(
+        parameterId: String,
+        value: Float,
+    ): ShaderSpec =
+        when (parameterId) {
             "intensity" -> copy(intensity = value)
             else -> this
         }
-    }
 }
-

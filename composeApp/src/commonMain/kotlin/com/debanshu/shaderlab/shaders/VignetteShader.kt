@@ -4,19 +4,14 @@ import com.debanshu.shaderlab.shaderlib.ShaderParameter
 import com.debanshu.shaderlab.shaderlib.ShaderSpec
 import com.debanshu.shaderlab.shaderlib.UniformSpec
 
-/**
- * Vignette shader effect.
- * Darkens the edges of the image, creating a focus effect.
- */
 data class VignetteShader(
     private val radius: Float = 0.5f,
-    private val intensity: Float = 0.5f
+    private val intensity: Float = 0.5f,
 ) : ShaderSpec {
-    
     override val id: String = "vignette"
-    
+
     override val displayName: String = "Vignette"
-    
+
     override val shaderCode: String = """
         uniform shader content;
         uniform float2 resolution;
@@ -37,32 +32,38 @@ data class VignetteShader(
             return half4(color.rgb * vignette, color.a);
         }
     """
-    
-    override val parameters: List<ShaderParameter> = listOf(
-        ShaderParameter.PercentageParam(
-            id = "radius",
-            label = "Radius",
-            defaultValue = radius
-        ),
-        ShaderParameter.PercentageParam(
-            id = "intensity",
-            label = "Intensity",
-            defaultValue = intensity
+
+    override val parameters: List<ShaderParameter> =
+        listOf(
+            ShaderParameter.PercentageParam(
+                id = "radius",
+                label = "Radius",
+                defaultValue = radius,
+            ),
+            ShaderParameter.PercentageParam(
+                id = "intensity",
+                label = "Intensity",
+                defaultValue = intensity,
+            ),
         )
-    )
-    
-    override fun buildUniforms(width: Float, height: Float): List<UniformSpec> = listOf(
-        UniformSpec.Floats("resolution", width, height),
-        UniformSpec.Floats("radius", radius),
-        UniformSpec.Floats("intensity", intensity)
-    )
-    
-    override fun withParameterValue(parameterId: String, value: Float): ShaderSpec {
-        return when (parameterId) {
+
+    override fun buildUniforms(
+        width: Float,
+        height: Float,
+    ): List<UniformSpec> =
+        listOf(
+            UniformSpec.Floats("resolution", width, height),
+            UniformSpec.Floats("radius", radius),
+            UniformSpec.Floats("intensity", intensity),
+        )
+
+    override fun withParameterValue(
+        parameterId: String,
+        value: Float,
+    ): ShaderSpec =
+        when (parameterId) {
             "radius" -> copy(radius = value)
             "intensity" -> copy(intensity = value)
             else -> this
         }
-    }
 }
-

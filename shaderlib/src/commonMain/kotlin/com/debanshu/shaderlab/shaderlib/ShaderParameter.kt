@@ -15,14 +15,14 @@ sealed interface ShaderParameter {
         override val label: String,
         override val range: ClosedFloatingPointRange<Float>,
         override val defaultValue: Float,
-        override val formatValue: (Float) -> String = { formatFloat(it, 1) }
+        override val formatValue: (Float) -> String = { formatFloat(it, 1) },
     ) : ShaderParameter
 
     data class PercentageParam(
         override val id: String,
         override val label: String,
         override val defaultValue: Float = 1f,
-        override val formatValue: (Float) -> String = { "${(it * 100).toInt()}%" }
+        override val formatValue: (Float) -> String = { "${(it * 100).toInt()}%" },
     ) : ShaderParameter {
         override val range: ClosedFloatingPointRange<Float> = 0f..1f
     }
@@ -32,21 +32,24 @@ sealed interface ShaderParameter {
         override val label: String,
         override val range: ClosedFloatingPointRange<Float>,
         override val defaultValue: Float,
-        override val formatValue: (Float) -> String = { "${it.toInt()}px" }
+        override val formatValue: (Float) -> String = { "${it.toInt()}px" },
     ) : ShaderParameter
 
     data class ToggleParam(
         override val id: String,
         override val label: String,
         val isEnabledByDefault: Boolean = false,
-        override val formatValue: (Float) -> String = { if (it > 0.5f) "On" else "Off" }
+        override val formatValue: (Float) -> String = { if (it > 0.5f) "On" else "Off" },
     ) : ShaderParameter {
         override val range: ClosedFloatingPointRange<Float> = 0f..1f
         override val defaultValue: Float = if (isEnabledByDefault) 1f else 0f
     }
 }
 
-internal fun formatFloat(value: Float, decimals: Int): String {
+internal fun formatFloat(
+    value: Float,
+    decimals: Int,
+): String {
     val multiplier = 10.0.pow(decimals)
     val rounded = (value * multiplier).roundToInt() / multiplier
     return if (decimals == 0) {
@@ -66,4 +69,3 @@ internal fun formatFloat(value: Float, decimals: Int): String {
         }
     }
 }
-

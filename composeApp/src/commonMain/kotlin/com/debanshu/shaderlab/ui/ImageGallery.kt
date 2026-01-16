@@ -160,7 +160,6 @@ private fun PickedImageThumbnail(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // For picked images, decode and display the bitmap
         image.bytes?.let { bytes ->
             val bitmap = remember(bytes) { decodeImageBytes(bytes) }
             if (bitmap != null) {
@@ -177,9 +176,6 @@ private fun PickedImageThumbnail(
     }
 }
 
-/**
- * A placeholder shown when an image cannot be loaded.
- */
 @Composable
 private fun ImagePlaceholder(
     message: String = "IMG",

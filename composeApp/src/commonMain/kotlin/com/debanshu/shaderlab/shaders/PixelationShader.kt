@@ -4,18 +4,13 @@ import com.debanshu.shaderlab.shaderlib.ShaderParameter
 import com.debanshu.shaderlab.shaderlib.ShaderSpec
 import com.debanshu.shaderlab.shaderlib.UniformSpec
 
-/**
- * Pixelation shader effect.
- * Creates a blocky, pixelated look by snapping coordinates to a grid.
- */
 data class PixelationShader(
-    private val pixelSize: Float = 10f
+    private val pixelSize: Float = 10f,
 ) : ShaderSpec {
-    
     override val id: String = "pixelation"
-    
+
     override val displayName: String = "Pixelate"
-    
+
     override val shaderCode: String = """
         uniform shader content;
         uniform float2 resolution;
@@ -31,26 +26,32 @@ data class PixelationShader(
             return content.eval(pixelCoord);
         }
     """
-    
-    override val parameters: List<ShaderParameter> = listOf(
-        ShaderParameter.PixelParam(
-            id = "pixelSize",
-            label = "Pixel Size",
-            range = 1f..100f,
-            defaultValue = pixelSize
+
+    override val parameters: List<ShaderParameter> =
+        listOf(
+            ShaderParameter.PixelParam(
+                id = "pixelSize",
+                label = "Pixel Size",
+                range = 1f..100f,
+                defaultValue = pixelSize,
+            ),
         )
-    )
-    
-    override fun buildUniforms(width: Float, height: Float): List<UniformSpec> = listOf(
-        UniformSpec.Floats("resolution", width, height),
-        UniformSpec.Floats("pixelSize", pixelSize.coerceAtLeast(1f))
-    )
-    
-    override fun withParameterValue(parameterId: String, value: Float): ShaderSpec {
-        return when (parameterId) {
+
+    override fun buildUniforms(
+        width: Float,
+        height: Float,
+    ): List<UniformSpec> =
+        listOf(
+            UniformSpec.Floats("resolution", width, height),
+            UniformSpec.Floats("pixelSize", pixelSize.coerceAtLeast(1f)),
+        )
+
+    override fun withParameterValue(
+        parameterId: String,
+        value: Float,
+    ): ShaderSpec =
+        when (parameterId) {
             "pixelSize" -> copy(pixelSize = value.coerceAtLeast(1f))
             else -> this
         }
-    }
 }
-

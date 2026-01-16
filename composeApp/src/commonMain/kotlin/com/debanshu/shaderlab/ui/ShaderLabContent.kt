@@ -61,30 +61,29 @@ import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShaderLabContent(
-    viewModel: ShaderLabViewModel
-) {
+fun ShaderLabContent(viewModel: ShaderLabViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    
-    val imagePicker = rememberImagePickerLauncher { result ->
-        when (result) {
-            is PickResult.Success -> {
-                viewModel.onImagePicked(result)
-            }
-            is PickResult.Error -> {
-                scope.launch {
-                    snackbarHostState.showSnackbar("Failed to pick image: ${result.message}")
+
+    val imagePicker =
+        rememberImagePickerLauncher { result ->
+            when (result) {
+                is PickResult.Success -> {
+                    viewModel.onImagePicked(result)
+                }
+
+                is PickResult.Error -> {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Failed to pick image: ${result.message}")
+                    }
+                }
+
+                is PickResult.Cancelled -> {
                 }
             }
-            is PickResult.Cancelled -> {
-                // User cancelled, do nothing
-            }
         }
-    }
-    
-    // Show export message
+
     LaunchedEffect(uiState.exportMessage) {
         uiState.exportMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
@@ -93,9 +92,10 @@ fun ShaderLabContent(
     }
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -103,27 +103,27 @@ fun ShaderLabContent(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
                             text = "ShaderLab",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         if (!uiState.shadersSupported) {
                             Box(
-                                modifier = Modifier
-                                    .background(
-                                        color = MaterialTheme.colorScheme.errorContainer,
-                                        shape = RoundedCornerShape(4.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier =
+                                    Modifier
+                                        .background(
+                                            color = MaterialTheme.colorScheme.errorContainer,
+                                            shape = RoundedCornerShape(4.dp),
+                                        ).padding(horizontal = 6.dp, vertical = 2.dp),
                             ) {
                                 Text(
                                     text = "Limited",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
                                 )
                             }
                         }
@@ -132,20 +132,25 @@ fun ShaderLabContent(
                 actions = {
                     IconButton(
                         onClick = { viewModel.toggleBeforeAfter() },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = if (uiState.showBeforeAfter)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                MaterialTheme.colorScheme.surfaceVariant
-                        )
+                        colors =
+                            IconButtonDefaults.iconButtonColors(
+                                containerColor =
+                                    if (uiState.showBeforeAfter) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    },
+                            ),
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.CompareArrows,
                             contentDescription = "Toggle before/after comparison",
-                            tint = if (uiState.showBeforeAfter)
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                            tint =
+                                if (uiState.showBeforeAfter) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                         )
                     }
 
@@ -161,23 +166,26 @@ fun ShaderLabContent(
                                             val exporter = createImageExporter()
                                             if (exporter.isSupported) {
                                                 // Apply shader effect if active and supported
-                                                val bytesToExport = if (activeEffect != null && areShadersSupported()) {
-                                                    withContext(Dispatchers.Default) {
-                                                        applyShaderToImage(originalBytes, activeEffect)
-                                                    } ?: originalBytes
-                                                } else {
-                                                    originalBytes
-                                                }
-                                                
+                                                val bytesToExport =
+                                                    if (activeEffect != null && areShadersSupported()) {
+                                                        withContext(Dispatchers.Default) {
+                                                            applyShaderToImage(originalBytes, activeEffect)
+                                                        } ?: originalBytes
+                                                    } else {
+                                                        originalBytes
+                                                    }
+
                                                 val config = ExportConfig()
                                                 val fileName = "shaderlab_${Random.nextInt(100000, 999999)}"
                                                 when (val result = exporter.exportImage(bytesToExport, fileName, config)) {
                                                     is ExportResult.Success -> {
                                                         snackbarHostState.showSnackbar("Image saved successfully!")
                                                     }
+
                                                     is ExportResult.Error -> {
                                                         snackbarHostState.showSnackbar("Export failed: ${result.message}")
                                                     }
+
                                                     is ExportResult.NotSupported -> {
                                                         snackbarHostState.showSnackbar("Export not supported on this platform")
                                                     }
@@ -189,18 +197,19 @@ fun ShaderLabContent(
                                             snackbarHostState.showSnackbar("Cannot export - image data not available")
                                         }
                                     }
+
                                     is ImageSource.Bundled -> {
                                         snackbarHostState.showSnackbar("Please select a picked image to export")
                                     }
                                 }
                             }
                         },
-                        enabled = uiState.selectedImage is ImageSource.Picked && !uiState.isExporting
+                        enabled = uiState.selectedImage is ImageSource.Picked && !uiState.isExporting,
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = "Export image",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
 
@@ -208,21 +217,23 @@ fun ShaderLabContent(
                         Icon(
                             imageVector = if (uiState.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
                             contentDescription = "Toggle theme",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState()),
         ) {
             ImageGallery(
                 sampleImages = uiState.sampleImages,
@@ -230,7 +241,7 @@ fun ShaderLabContent(
                 selectedImage = uiState.selectedImage,
                 onSelectImage = { viewModel.selectImage(it) },
                 onAddImage = { imagePicker.launch() },
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(vertical = 8.dp),
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -241,28 +252,31 @@ fun ShaderLabContent(
                     fadeIn() togetherWith fadeOut()
                 },
                 label = "previewMode",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
             ) { showComparison ->
                 if (showComparison) {
                     BeforeAfterView(
                         imageSource = uiState.selectedImage,
                         effect = uiState.activeEffect,
                         onWaveTimeUpdate = { viewModel.updateAnimationTime(it) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(4f / 3f)
-                            .clip(RoundedCornerShape(16.dp))
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(4f / 3f)
+                                .clip(RoundedCornerShape(16.dp)),
                     )
                 } else {
                     ShaderPreview(
                         imageSource = uiState.selectedImage,
                         effect = uiState.activeEffect,
                         onWaveTimeUpdate = { viewModel.updateAnimationTime(it) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(4f / 3f)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(4f / 3f),
                     )
                 }
             }
@@ -273,7 +287,7 @@ fun ShaderLabContent(
                 activeEffect = uiState.activeEffect,
                 onEffectSelected = { viewModel.setActiveEffect(it) },
                 onParameterChanged = { parameterId, value -> viewModel.updateEffectParameter(parameterId, value) },
-                onClearEffect = { viewModel.setActiveEffect(null) }
+                onClearEffect = { viewModel.setActiveEffect(null) },
             )
 
             Spacer(modifier = Modifier.height(16.dp))

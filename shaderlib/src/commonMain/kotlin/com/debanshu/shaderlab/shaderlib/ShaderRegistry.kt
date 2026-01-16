@@ -15,24 +15,17 @@ object ShaderRegistry {
         specs.forEach { register(it) }
     }
 
-    fun getAll(): List<ShaderSpec> {
-        return registrationOrder.mapNotNull { shaders[it] }
-    }
+    fun getAll(): List<ShaderSpec> = registrationOrder.mapNotNull { shaders[it] }
 
-    fun getById(id: String): ShaderSpec? {
-        return shaders[id]
-    }
+    fun getById(id: String): ShaderSpec? = shaders[id]
 
     fun clear() {
         shaders.clear()
         registrationOrder.clear()
     }
 
-    fun contains(id: String): Boolean {
-        return shaders.containsKey(id)
-    }
+    fun contains(id: String): Boolean = shaders.containsKey(id)
 
     val size: Int
         get() = shaders.size
 }
-

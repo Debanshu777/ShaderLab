@@ -39,87 +39,77 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.debanshu.shaderlab.shaderlib.ShaderParameter
-import com.debanshu.shaderlab.shaderlib.ShaderSpec
 import com.debanshu.shaderlab.shaderlib.ShaderRegistry
+import com.debanshu.shaderlab.shaderlib.ShaderSpec
 
-/**
- * Shader effect controls component.
- * Uses the self-describing parameter system to dynamically render controls.
- * 
- * @param activeEffect The currently active shader effect
- * @param onEffectSelected Called when an effect is selected
- * @param onParameterChanged Called when a parameter value changes (parameterId, newValue)
- * @param onClearEffect Called when the effect should be cleared
- */
 @Composable
 fun ShaderControls(
     activeEffect: ShaderSpec?,
     onEffectSelected: (ShaderSpec) -> Unit,
     onParameterChanged: (String, Float) -> Unit,
     onClearEffect: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-            )
-            .padding(vertical = 16.dp)
-    ) {
-        // Header with title and clear button
-        Row(
-            modifier = Modifier
+        modifier =
+            modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .background(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                ).padding(vertical = 16.dp),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = "Shader Effects",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
-            
+
             if (activeEffect != null) {
                 IconButton(
                     onClick = onClearEffect,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(32.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Clear effect",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(12.dp))
-        
-        // Effect selection chips
+
         EffectChipRow(
             activeEffect = activeEffect,
-            onEffectSelected = onEffectSelected
+            onEffectSelected = onEffectSelected,
         )
-        
-        // Dynamic parameter controls based on the active effect
+
         AnimatedVisibility(
             visible = activeEffect != null && activeEffect.parameters.isNotEmpty(),
             enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
+            exit = fadeOut() + shrinkVertically(),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, start = 16.dp, end = 16.dp),
             ) {
                 activeEffect?.parameters?.forEachIndexed { index, parameter ->
                     EffectParameterControl(
                         parameter = parameter,
-                        onValueChange = { value -> onParameterChanged(parameter.id, value) }
+                        onValueChange = { value -> onParameterChanged(parameter.id, value) },
                     )
                     if (index < activeEffect.parameters.lastIndex) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -127,31 +117,27 @@ fun ShaderControls(
                 }
             }
         }
-        
-        // Show message for effects without parameters
+
         AnimatedVisibility(
             visible = activeEffect != null && activeEffect.parameters.isEmpty(),
             enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
+            exit = fadeOut() + shrinkVertically(),
         ) {
             Text(
                 text = "No adjustable parameters",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp),
             )
         }
     }
 }
 
-/**
- * Renders the appropriate control for a parameter based on its type.
- */
 @Composable
 private fun EffectParameterControl(
     parameter: ShaderParameter,
     onValueChange: (Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     when (parameter) {
         is ShaderParameter.ToggleParam -> {
@@ -159,9 +145,10 @@ private fun EffectParameterControl(
                 label = parameter.label,
                 isEnabled = parameter.defaultValue > 0.5f,
                 onToggle = { enabled -> onValueChange(if (enabled) 1f else 0f) },
-                modifier = modifier
+                modifier = modifier,
             )
         }
+
         else -> {
             SliderControl(
                 label = parameter.label,
@@ -169,7 +156,7 @@ private fun EffectParameterControl(
                 valueRange = parameter.range,
                 onValueChange = onValueChange,
                 formatValue = parameter.formatValue,
-                modifier = modifier
+                modifier = modifier,
             )
         }
     }
@@ -182,23 +169,23 @@ private fun SliderControl(
     valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
     formatValue: (Float) -> String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = formatValue(value),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -206,11 +193,12 @@ private fun SliderControl(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            colors =
+                SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
         )
     }
 }
@@ -220,25 +208,26 @@ private fun ToggleControl(
     label: String,
     isEnabled: Boolean,
     onToggle: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Switch(
             checked = isEnabled,
             onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
-            )
+            colors =
+                SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
         )
     }
 }
@@ -247,20 +236,20 @@ private fun ToggleControl(
 private fun EffectChipRow(
     activeEffect: ShaderSpec?,
     onEffectSelected: (ShaderSpec) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val effects = ShaderRegistry.getAll()
-    
+
     LazyRow(
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         items(effects) { effect ->
             EffectChip(
                 effect = effect,
                 isSelected = activeEffect?.id == effect.id,
-                onClick = { onEffectSelected(effect) }
+                onClick = { onEffectSelected(effect) },
             )
         }
     }
@@ -271,52 +260,55 @@ private fun EffectChip(
     effect: ShaderSpec,
     isSelected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val backgroundColor = if (isSelected) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-    
-    val contentColor = if (isSelected) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    
-    val borderColor = if (isSelected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-    }
-    
+    val backgroundColor =
+        if (isSelected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
+
+    val contentColor =
+        if (isSelected) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+
+    val borderColor =
+        if (isSelected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+        }
+
     Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(backgroundColor)
-            .border(
-                width = if (isSelected) 2.dp else 1.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(20.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(backgroundColor)
+                .border(
+                    width = if (isSelected) 2.dp else 1.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(20.dp),
+                ).clickable(onClick = onClick)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (isSelected) {
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(16.dp),
             )
             Spacer(modifier = Modifier.width(6.dp))
         }
         Text(
             text = effect.displayName,
             style = MaterialTheme.typography.labelMedium,
-            color = contentColor
+            color = contentColor,
         )
     }
 }

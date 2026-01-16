@@ -41,97 +41,93 @@ fun ShaderPreview(
     imageSource: ImageSource,
     effect: ShaderSpec?,
     onWaveTimeUpdate: (Float) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var contentWidth by remember { mutableFloatStateOf(0f) }
     var contentHeight by remember { mutableFloatStateOf(0f) }
-    
-    // Handle animation for animatable shaders
+
     val animatableEffect = effect as? AnimatableShaderSpec
     val shouldAnimate = animatableEffect?.isAnimating == true
-    
-    // Animation for wave distortion and other animatable effects
+
     val infiniteTransition = rememberInfiniteTransition(label = "wave")
     val animatedTime by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 10f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(10000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "waveTime"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(10000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "waveTime",
     )
-    
-    // Update wave time when animating
+
     LaunchedEffect(shouldAnimate, animatedTime) {
         if (shouldAnimate) {
             onWaveTimeUpdate(animatedTime)
         }
     }
-    
-    // Create the render effect based on current size and effect type
-    val renderEffect = remember(effect, contentWidth, contentHeight) {
-        if (effect != null && contentWidth > 0 && contentHeight > 0 && areShadersSupported()) {
-            createShaderEffect(effect, contentWidth, contentHeight)
-        } else {
-            null
+
+    val renderEffect =
+        remember(effect, contentWidth, contentHeight) {
+            if (effect != null && contentWidth > 0 && contentHeight > 0 && areShadersSupported()) {
+                createShaderEffect(effect, contentWidth, contentHeight)
+            } else {
+                null
+            }
         }
-    }
-    
+
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .onSizeChanged { size ->
-                contentWidth = size.width.toFloat()
-                contentHeight = size.height.toFloat()
-            },
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .onSizeChanged { size ->
+                    contentWidth = size.width.toFloat()
+                    contentHeight = size.height.toFloat()
+                },
+        contentAlignment = Alignment.Center,
     ) {
-        // Image with effect applied
         ImageWithEffect(
             imageSource = imageSource,
             renderEffect = renderEffect,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         )
-        
-        // Show effect label
+
         effect?.let {
             Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(12.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(12.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+                            shape = RoundedCornerShape(8.dp),
+                        ).padding(horizontal = 12.dp, vertical = 6.dp),
             ) {
                 Text(
                     text = it.displayName,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
-        
-        // Show warning if shaders not supported
+
         if (!areShadersSupported() && effect != null) {
             Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(12.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(12.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f),
+                            shape = RoundedCornerShape(8.dp),
+                        ).padding(horizontal = 12.dp, vertical = 6.dp),
             ) {
                 Text(
                     text = "Shaders not supported on this device",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer
+                    color = MaterialTheme.colorScheme.onErrorContainer,
                 )
             }
         }
@@ -142,44 +138,48 @@ fun ShaderPreview(
 private fun ImageWithEffect(
     imageSource: ImageSource,
     renderEffect: androidx.compose.ui.graphics.RenderEffect?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     when (imageSource) {
         is ImageSource.Bundled -> {
             Box(
-                modifier = modifier.graphicsLayer {
-                    this.renderEffect = renderEffect
-                }
+                modifier =
+                    modifier.graphicsLayer {
+                        this.renderEffect = renderEffect
+                    },
             ) {
                 SampleImage(
                     resourceName = imageSource.resourceName,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
+                    contentScale = ContentScale.Fit,
                 )
             }
         }
+
         is ImageSource.Picked -> {
-            val imageBitmap = remember(imageSource.bytes) {
-                imageSource.bytes?.let { decodeImageBytes(it) }
-            }
+            val imageBitmap =
+                remember(imageSource.bytes) {
+                    imageSource.bytes?.let { decodeImageBytes(it) }
+                }
             if (imageBitmap != null) {
                 Image(
                     bitmap = imageBitmap,
                     contentDescription = "Preview image",
-                    modifier = modifier.graphicsLayer {
-                        this.renderEffect = renderEffect
-                    },
-                    contentScale = ContentScale.Fit
+                    modifier =
+                        modifier.graphicsLayer {
+                            this.renderEffect = renderEffect
+                        },
+                    contentScale = ContentScale.Fit,
                 )
             } else {
                 Box(
                     modifier = modifier.background(MaterialTheme.colorScheme.errorContainer),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "Unable to load image",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer
+                        color = MaterialTheme.colorScheme.onErrorContainer,
                     )
                 }
             }

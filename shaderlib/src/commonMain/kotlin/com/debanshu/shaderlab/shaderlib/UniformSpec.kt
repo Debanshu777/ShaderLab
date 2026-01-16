@@ -5,7 +5,7 @@ sealed class UniformSpec {
 
     data class Floats(
         override val name: String,
-        val values: FloatArray
+        val values: FloatArray,
     ) : UniformSpec() {
         constructor(name: String, v1: Float) : this(name, floatArrayOf(v1))
         constructor(name: String, v1: Float, v2: Float) : this(name, floatArrayOf(v1, v2))
@@ -27,7 +27,7 @@ sealed class UniformSpec {
 
     data class Ints(
         override val name: String,
-        val values: IntArray
+        val values: IntArray,
     ) : UniformSpec() {
         constructor(name: String, v1: Int) : this(name, intArrayOf(v1))
         constructor(name: String, v1: Int, v2: Int) : this(name, intArrayOf(v1, v2))

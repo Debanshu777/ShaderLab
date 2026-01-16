@@ -8,7 +8,11 @@ import org.jetbrains.skia.RuntimeEffect
 import org.jetbrains.skia.RuntimeShaderBuilder
 
 internal object SkiaShaderFactory {
-    fun createEffect(spec: ShaderSpec, width: Float, height: Float): RenderEffect {
+    fun createEffect(
+        spec: ShaderSpec,
+        width: Float,
+        height: Float,
+    ): RenderEffect {
         if (spec is NativeBlurSpec) {
             return createNativeBlur(spec.radius)
         }
@@ -18,18 +22,23 @@ internal object SkiaShaderFactory {
         val uniforms = spec.buildUniforms(width, height)
 
         applyUniforms(builder, uniforms)
-        
-        return ImageFilter.makeRuntimeShader(builder, "content", null)
+
+        return ImageFilter
+            .makeRuntimeShader(builder, "content", null)
             .asComposeRenderEffect()
     }
 
     private fun createNativeBlur(radius: Float): RenderEffect {
         val radiusPx = radius.coerceAtLeast(0.1f)
-        return ImageFilter.makeBlur(radiusPx, radiusPx, FilterTileMode.CLAMP)
+        return ImageFilter
+            .makeBlur(radiusPx, radiusPx, FilterTileMode.CLAMP)
             .asComposeRenderEffect()
     }
 
-    private fun applyUniforms(builder: RuntimeShaderBuilder, uniforms: List<UniformSpec>) {
+    private fun applyUniforms(
+        builder: RuntimeShaderBuilder,
+        uniforms: List<UniformSpec>,
+    ) {
         uniforms.forEach { uniform ->
             when (uniform) {
                 is UniformSpec.Floats -> builder.uniform(uniform.name, uniform.values)

@@ -11,9 +11,6 @@ import shaderlab.composeapp.generated.resources.sample_landscape
 import shaderlab.composeapp.generated.resources.sample_nature
 import shaderlab.composeapp.generated.resources.sample_portrait
 
-/**
- * Display a sample image from the app's bundled resources.
- */
 @Composable
 fun SampleImage(
     resourceName: String,

@@ -12,8 +12,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        
-        // Initialize the image exporter with application context
         initImageExporter(applicationContext)
 
         setContent {
