@@ -48,9 +48,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.debanshu.shaderlab.imagelib.ExportConfig
 import com.debanshu.shaderlab.imagelib.ExportResult
+import com.debanshu.shaderlab.imagelib.ImagePermission
+import com.debanshu.shaderlab.imagelib.PermissionStatus
 import com.debanshu.shaderlab.imagelib.PickResult
 import com.debanshu.shaderlab.imagelib.createImageExporter
 import com.debanshu.shaderlab.imagelib.rememberImagePickerLauncher
+import com.debanshu.shaderlab.imagelib.rememberPermissionHandler
 import com.debanshu.shaderlab.shaderlib.applyShaderToImage
 import com.debanshu.shaderlab.shaderlib.areShadersSupported
 import com.debanshu.shaderlab.viewmodel.ImageSource
@@ -66,6 +69,7 @@ fun ShaderLabContent(viewModel: ShaderLabViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val permissionHandler = rememberPermissionHandler()
 
     val imagePicker =
         rememberImagePickerLauncher { result ->
@@ -158,6 +162,22 @@ fun ShaderLabContent(viewModel: ShaderLabViewModel) {
                     IconButton(
                         onClick = {
                             scope.launch {
+                                // Check write permission before export
+                                val permissionStatus = permissionHandler.checkPermission(ImagePermission.WRITE_IMAGES)
+                                val hasPermission = when (permissionStatus) {
+                                    PermissionStatus.GRANTED, PermissionStatus.NOT_REQUIRED -> true
+                                    PermissionStatus.NOT_REQUESTED -> {
+                                        val result = permissionHandler.requestPermission(ImagePermission.WRITE_IMAGES)
+                                        result == PermissionStatus.GRANTED || result == PermissionStatus.NOT_REQUIRED
+                                    }
+                                    PermissionStatus.DENIED -> false
+                                }
+
+                                if (!hasPermission) {
+                                    snackbarHostState.showSnackbar("Storage access denied. Please grant permission in settings.")
+                                    return@launch
+                                }
+
                                 val selectedImage = uiState.selectedImage
                                 val activeEffect = uiState.activeEffect
                                 when (selectedImage) {
@@ -241,7 +261,27 @@ fun ShaderLabContent(viewModel: ShaderLabViewModel) {
                 pickedImages = uiState.pickedImages,
                 selectedImage = uiState.selectedImage,
                 onSelectImage = { viewModel.selectImage(it) },
-                onAddImage = { imagePicker.launch() },
+                onAddImage = {
+                    scope.launch {
+                        val status = permissionHandler.checkPermission(ImagePermission.READ_IMAGES)
+                        when (status) {
+                            PermissionStatus.GRANTED, PermissionStatus.NOT_REQUIRED -> {
+                                imagePicker.launch()
+                            }
+                            PermissionStatus.NOT_REQUESTED -> {
+                                val result = permissionHandler.requestPermission(ImagePermission.READ_IMAGES)
+                                if (result == PermissionStatus.GRANTED || result == PermissionStatus.NOT_REQUIRED) {
+                                    imagePicker.launch()
+                                } else {
+                                    snackbarHostState.showSnackbar("Photo access denied. Please grant permission in settings.")
+                                }
+                            }
+                            PermissionStatus.DENIED -> {
+                                snackbarHostState.showSnackbar("Photo access denied. Please grant permission in settings.")
+                            }
+                        }
+                    }
+                },
                 modifier = Modifier.padding(vertical = 8.dp),
             )
 

@@ -4,12 +4,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import org.jetbrains.skia.Image
 
-actual fun decodeImageBytes(bytes: ByteArray): ImageBitmap? {
-    return try {
+actual fun decodeImageBytes(bytes: ByteArray): ImageBitmap? =
+    try {
         val skiaImage = Image.makeFromEncoded(bytes)
         skiaImage.toComposeImageBitmap()
     } catch (e: Exception) {
         null
     }
-}
-

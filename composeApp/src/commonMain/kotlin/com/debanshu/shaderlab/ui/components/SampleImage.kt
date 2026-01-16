@@ -15,21 +15,21 @@ import shaderlab.composeapp.generated.resources.sample_portrait
 fun SampleImage(
     resourceName: String,
     modifier: Modifier = Modifier,
-    contentScale: ContentScale = ContentScale.Fit
+    contentScale: ContentScale = ContentScale.Fit,
 ) {
-    val painter = when (resourceName) {
-        "sample_landscape" -> painterResource(Res.drawable.sample_landscape)
-        "sample_portrait" -> painterResource(Res.drawable.sample_portrait)
-        "sample_nature" -> painterResource(Res.drawable.sample_nature)
-        "sample_abstract" -> painterResource(Res.drawable.sample_abstract)
-        else -> painterResource(Res.drawable.sample_landscape)
-    }
-    
+    val painter =
+        when (resourceName) {
+            "sample_landscape" -> painterResource(Res.drawable.sample_landscape)
+            "sample_portrait" -> painterResource(Res.drawable.sample_portrait)
+            "sample_nature" -> painterResource(Res.drawable.sample_nature)
+            "sample_abstract" -> painterResource(Res.drawable.sample_abstract)
+            else -> painterResource(Res.drawable.sample_landscape)
+        }
+
     Image(
         painter = painter,
         contentDescription = resourceName,
         modifier = modifier,
-        contentScale = contentScale
+        contentScale = contentScale,
     )
 }
-

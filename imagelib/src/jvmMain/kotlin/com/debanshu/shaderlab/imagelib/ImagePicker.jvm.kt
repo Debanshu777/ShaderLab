@@ -11,13 +11,13 @@ import java.io.File
 @Composable
 actual fun rememberImagePickerLauncher(onResult: (PickResult) -> Unit): ImagePickerLauncher {
     var showFilePicker by remember { mutableStateOf(false) }
-    
+
     FilePicker(
         show = showFilePicker,
-        fileExtensions = listOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
+        fileExtensions = listOf("jpg", "jpeg", "png", "webp", "gif", "bmp"),
     ) { platformFile ->
         showFilePicker = false
-        
+
         if (platformFile != null) {
             try {
                 val file = File(platformFile.path)
@@ -34,7 +34,7 @@ actual fun rememberImagePickerLauncher(onResult: (PickResult) -> Unit): ImagePic
             onResult(PickResult.Cancelled)
         }
     }
-    
+
     return remember {
         object : ImagePickerLauncher {
             override fun launch() {
@@ -43,4 +43,3 @@ actual fun rememberImagePickerLauncher(onResult: (PickResult) -> Unit): ImagePic
         }
     }
 }
-
