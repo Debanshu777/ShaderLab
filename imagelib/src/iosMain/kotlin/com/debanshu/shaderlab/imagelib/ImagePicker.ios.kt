@@ -26,68 +26,64 @@ import platform.darwin.NSObject
 import platform.posix.memcpy
 
 @Composable
-actual fun rememberImagePickerLauncher(onResult: (PickResult) -> Unit): ImagePickerLauncher {
-    return remember(onResult) {
+actual fun rememberImagePickerLauncher(onResult: (PickResult) -> Unit): ImagePickerLauncher =
+    remember(onResult) {
         IOSImagePickerLauncher(onResult)
     }
-}
 
 private class IOSImagePickerLauncher(
-    private val onResult: (PickResult) -> Unit
+    private val onResult: (PickResult) -> Unit,
 ) : ImagePickerLauncher {
-    
-    // Keep a strong reference to the delegate to prevent garbage collection
     private var currentDelegate: ImagePickerDelegate? = null
-    
+
     override fun launch() {
         val picker = UIImagePickerController()
         picker.sourceType = UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary
-        
-        // Create delegate with cleanup callback
-        val delegate = ImagePickerDelegate(
-            onResult = { result ->
-                onResult(result)
-                // Clear the reference after callback
-                currentDelegate = null
-            }
-        )
-        
-        // Store strong reference
+
+        val delegate =
+            ImagePickerDelegate(
+                onResult = { result ->
+                    onResult(result)
+                    currentDelegate = null
+                },
+            )
+
         currentDelegate = delegate
         picker.delegate = delegate
-        
+
         val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController
         rootViewController?.presentViewController(picker, animated = true, completion = null)
     }
 }
 
 private class ImagePickerDelegate(
-    private val onResult: (PickResult) -> Unit
-) : NSObject(), UIImagePickerControllerDelegateProtocol, UINavigationControllerDelegateProtocol {
-    
+    private val onResult: (PickResult) -> Unit,
+) : NSObject(),
+    UIImagePickerControllerDelegateProtocol,
+    UINavigationControllerDelegateProtocol {
     @OptIn(ExperimentalForeignApi::class)
     override fun imagePickerController(
         picker: UIImagePickerController,
-        didFinishPickingMediaWithInfo: Map<Any?, *>
+        didFinishPickingMediaWithInfo: Map<Any?, *>,
     ) {
         picker.dismissViewControllerAnimated(true, completion = null)
-        
+
         val image = didFinishPickingMediaWithInfo[UIImagePickerControllerOriginalImage] as? UIImage
         if (image == null) {
             onResult(PickResult.Error("Failed to get image"))
             return
         }
-        
+
         val jpegData = UIImageJPEGRepresentation(image, 1.0)
         if (jpegData == null) {
             onResult(PickResult.Error("Failed to convert image to data"))
             return
         }
-        
+
         val bytes = jpegData.toByteArray()
         onResult(PickResult.Success("picked_image", bytes))
     }
-    
+
     override fun imagePickerControllerDidCancel(picker: UIImagePickerController) {
         picker.dismissViewControllerAnimated(true, completion = null)
         onResult(PickResult.Cancelled)

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -207,7 +208,7 @@ fun ShaderLabContent(viewModel: ShaderLabViewModel) {
                         enabled = uiState.selectedImage is ImageSource.Picked && !uiState.isExporting,
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Share,
+                            imageVector = Icons.Default.Save,
                             contentDescription = "Export image",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
