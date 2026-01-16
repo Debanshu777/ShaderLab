@@ -1,48 +1,184 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Desktop (JVM).
+# ShaderX
 
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./composeApp/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
-    folder is the appropriate location.
+A Kotlin Multiplatform library for GPU shader effects in Jetpack Compose.
 
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue.svg)](https://kotlinlang.org)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose-1.9.3-green.svg)](https://www.jetbrains.com/lp/compose-multiplatform/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-### Build and Run Android Application
+## Features
 
-To build and run the development version of the Android app, use the run configuration from the run widget
-in your IDE’s toolbar or build it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:assembleDebug
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:assembleDebug
-  ```
+- **Cross-platform**: Works on Android, iOS, and Desktop (JVM)
+- **Type-safe API**: Strongly typed parameters and error handling
+- **Built-in effects**: Grayscale, Sepia, Vignette, Blur, Pixelate, and more
+- **Custom shaders**: Create your own effects with AGSL/SkSL
+- **Animation support**: Built-in support for animated effects
+- **Compose integration**: Easy-to-use Modifier extensions
 
-### Build and Run Desktop (JVM) Application
+## Installation
 
-To build and run the development version of the desktop app, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:run
-  ```
+Add the dependency to your `build.gradle.kts`:
 
-### Build and Run iOS Application
+```kotlin
+dependencies {
+    implementation("io.github.debanshu:shaderx:1.0.0")
+}
+```
 
-To build and run the development version of the iOS app, use the run configuration from the run widget
-in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+## Quick Start
 
----
+### Apply a simple effect
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+```kotlin
+import com.debanshu.shaderlab.shaderx.compose.shaderEffect
+import com.debanshu.shaderlab.shaderx.effects.GrayscaleEffect
+
+@Composable
+fun GrayscaleImage() {
+    Image(
+        painter = painterResource("photo.png"),
+        contentDescription = null,
+        modifier = Modifier.shaderEffect(GrayscaleEffect())
+    )
+}
+```
+
+### Use animated effects
+
+```kotlin
+import com.debanshu.shaderlab.shaderx.compose.rememberShaderEffect
+import com.debanshu.shaderlab.shaderx.compose.shaderEffect
+import com.debanshu.shaderlab.shaderx.effects.WaveEffect
+
+@Composable
+fun AnimatedImage() {
+    val waveEffect = rememberShaderEffect(WaveEffect(amplitude = 10f))
+    
+    Image(
+        painter = painterResource("photo.png"),
+        contentDescription = null,
+        modifier = Modifier.shaderEffect(waveEffect)
+    )
+}
+```
+
+### Adjust parameters
+
+```kotlin
+val effect = GrayscaleEffect(intensity = 0.5f)
+val updatedEffect = effect.withParameter("intensity", 0.8f)
+```
+
+## Built-in Effects
+
+| Effect | Description |
+|--------|-------------|
+| `GrayscaleEffect` | Converts to grayscale using luminance weights |
+| `SepiaEffect` | Applies vintage sepia tone |
+| `VignetteEffect` | Darkens image edges |
+| `NativeBlurEffect` | Hardware-accelerated Gaussian blur |
+| `PixelateEffect` | Creates retro pixelation |
+| `ChromaticAberrationEffect` | Simulates lens color separation |
+| `InvertEffect` | Inverts all colors |
+| `WaveEffect` | Animated wave distortion |
+
+## Creating Custom Effects
+
+```kotlin
+data class MyEffect(
+    private val intensity: Float = 1f
+) : RuntimeShaderEffect {
+
+    override val id = "my_effect"
+    override val displayName = "My Effect"
+
+    override val shaderSource = """
+        uniform shader content;
+        uniform float intensity;
+        
+        half4 main(float2 fragCoord) {
+            half4 color = content.eval(fragCoord);
+            return half4(color.rgb * intensity, color.a);
+        }
+    """
+
+    override val parameters = listOf(
+        PercentageParameter("intensity", "Intensity", intensity)
+    )
+
+    override fun buildUniforms(width: Float, height: Float) = listOf(
+        FloatUniform("intensity", intensity)
+    )
+
+    override fun withParameter(id: String, value: Float) = when (id) {
+        "intensity" -> copy(intensity = value)
+        else -> this
+    }
+}
+```
+
+## Error Handling
+
+The library uses `ShaderResult<T>` for operations that may fail:
+
+```kotlin
+val factory = ShaderFactory.create()
+val result = factory.createRenderEffect(effect, width, height)
+
+result
+    .onSuccess { renderEffect ->
+        // Apply the effect
+    }
+    .onFailure { error ->
+        when (error) {
+            is ShaderError.CompilationError -> log("Shader compile failed: ${error.message}")
+            is ShaderError.UnsupportedEffect -> log("Effect not supported: ${error.effectId}")
+            is ShaderError.PlatformNotSupported -> log("Platform limitation: ${error.message}")
+            else -> log("Unknown error: ${error.message}")
+        }
+    }
+```
+
+## Platform Support
+
+| Platform | Shader Backend | Min Version |
+|----------|---------------|-------------|
+| Android | AGSL (RuntimeShader) | API 33 |
+| iOS | Skia | iOS 14+ |
+| Desktop | Skia | JDK 11+ |
+
+## Architecture
+
+```
+shaderx/
+├── effect/           # Core effect interfaces
+│   ├── ShaderEffect
+│   ├── RuntimeShaderEffect
+│   ├── AnimatedShaderEffect
+│   └── NativeEffect
+├── effects/          # Built-in effect implementations
+├── factory/          # Platform-specific factories
+├── parameter/        # Parameter types and formatting
+├── uniform/          # Shader uniform types
+├── result/           # Error handling
+└── compose/          # Compose integration
+```
+
+## License
+
+```
+Copyright 2024 Debanshu
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
+
