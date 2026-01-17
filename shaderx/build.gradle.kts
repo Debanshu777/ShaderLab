@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     `maven-publish`
@@ -18,11 +18,14 @@ kotlin {
     // Explicit API mode for public library
     explicitApi()
 
-    androidTarget {
+    androidLibrary {
+        namespace = "io.github.debanshu.shaderx"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
+
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }
-        publishLibraryVariants("release")
     }
 
     listOf(
@@ -67,21 +70,6 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.kotlin.testJunit)
         }
-    }
-}
-
-android {
-    namespace = "io.github.debanshu.shaderx"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-
-    defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
     }
 }
 

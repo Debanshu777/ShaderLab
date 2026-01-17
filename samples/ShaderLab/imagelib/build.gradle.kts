@@ -2,13 +2,17 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
 }
 
 kotlin {
-    androidTarget {
+    androidLibrary {
+        namespace = "com.debanshu.shaderlab.imagelib"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
+
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }
@@ -43,25 +47,5 @@ kotlin {
             implementation(libs.mpfilepicker)
             implementation(libs.kotlinx.coroutinesSwing)
         }
-    }
-}
-
-android {
-    namespace = "com.debanshu.shaderlab.imagelib"
-    compileSdk =
-        libs.versions.android.compileSdk
-            .get()
-            .toInt()
-
-    defaultConfig {
-        minSdk =
-            libs.versions.android.minSdk
-                .get()
-                .toInt()
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
     }
 }

@@ -33,5 +33,6 @@ plugins {
 }
 
 include(":shaderx")
+include(":samples:ShaderLab:androidApp")
 include(":samples:ShaderLab:composeApp")
 include(":samples:ShaderLab:imagelib")
