@@ -11,6 +11,7 @@ import com.debanshu.shaderlab.shaderx.result.ShaderResult
 import com.debanshu.shaderlab.shaderx.uniform.ColorUniform
 import com.debanshu.shaderlab.shaderx.uniform.FloatUniform
 import com.debanshu.shaderlab.shaderx.uniform.IntUniform
+import com.debanshu.shaderlab.shaderx.uniform.MatrixUniform
 import com.debanshu.shaderlab.shaderx.uniform.Uniform
 import org.jetbrains.skia.FilterTileMode
 import org.jetbrains.skia.ImageFilter
@@ -22,9 +23,12 @@ import org.jetbrains.skia.RuntimeShaderBuilder
  *
  * Uses Skia's RuntimeEffect for custom shader compilation and ImageFilter for effects.
  *
- * This implementation caches compiled RuntimeEffects by source code to avoid
- * recompilation on every frame. Shader compilation is expensive, but
- * setting uniforms via RuntimeShaderBuilder is cheap.
+ * Compiled effects are cached in a real access-order LRU ([LruCache]). When [close] or
+ * [clearCache] is called, each evicted [RuntimeEffect] is closed to release its native
+ * off-heap memory.
+ *
+ * Composite chaining is not supported (Compose's `RenderEffect` does not expose its
+ * underlying Skia `ImageFilter`, preventing `ImageFilter.makeCompose` usage).
  *
  * @param maxCacheSize Maximum number of shaders to cache (default: 50)
  */
@@ -32,12 +36,13 @@ internal class SkiaShaderFactory(
     maxCacheSize: Int = DEFAULT_CACHE_SIZE,
 ) : BaseShaderFactory(maxCacheSize) {
     /**
-     * Cache of compiled RuntimeEffects keyed by shader source code.
-     * RuntimeEffect compilation is expensive, so caching provides significant performance benefits.
-     *
-     * Uses LinkedHashMap to maintain insertion order for LRU eviction.
+     * Access-order LRU cache of compiled RuntimeEffects keyed by shader source code.
+     * Skia's RuntimeEffect compilation is expensive; evicted effects are closed to
+     * release native off-heap memory.
      */
-    private val effectCache = linkedMapOf<String, RuntimeEffect>()
+    private val effectCache = LruCache<String, RuntimeEffect>(maxCacheSize)
+
+    override val supportsChaining: Boolean = false
 
     override fun createNativeEffect(effect: NativeEffect): ShaderResult<RenderEffect> =
         when (effect) {
@@ -50,8 +55,8 @@ internal class SkiaShaderFactory(
                     ShaderError.UnsupportedEffect(
                         "Unsupported native effect: ${effect::class.simpleName}",
                         effect.id,
-                    ),
-                )
+                ),
+            )
             }
         }
 
@@ -89,39 +94,20 @@ internal class SkiaShaderFactory(
         }
 
     /**
-     * Gets a cached RuntimeEffect or creates and caches a new one.
-     * RuntimeEffect compilation is expensive, so caching provides significant performance benefits.
+     * Gets a cached RuntimeEffect or creates and caches a new one via the LRU cache.
+     * Accessible from [SkiaImageProcessor] in the same source set to share the cache.
      */
-    private fun getOrCreateEffect(source: String): RuntimeEffect =
-        effectCache.getOrPut(source) {
-            evictIfNeeded(effectCache)
-            RuntimeEffect.makeForShader(source)
-        }
+    internal fun getOrCreateEffect(source: String): RuntimeEffect = effectCache.getOrPut(source) { RuntimeEffect.makeForShader(source) }
 
     override fun isSupported(): Boolean = true
 
-    override fun clearCache() {
-        effectCache.clear()
-    }
+    /** Clears the cache and closes each cached [RuntimeEffect] to free native memory. */
+    override fun clearCache() = effectCache.clear { it.close() }
 
-    override val cacheSize: Int
-        get() = effectCache.size
+    /** Equivalent to [clearCache]. */
+    override fun close() = effectCache.clear { it.close() }
 
-    override fun chainEffects(
-        first: RenderEffect,
-        second: RenderEffect,
-    ): RenderEffect {
-        // Note: Compose RenderEffect doesn't expose its underlying Skia ImageFilter,
-        // so we cannot use ImageFilter.makeCompose directly.
-        //
-        // For now, return the second effect as a fallback.
-        // Full chaining would require accessing internal Compose APIs or
-        // restructuring to work with ImageFilters directly.
-        //
-        // Consider using CompositeEffect with individual effects applied in
-        // sequence via the modifier for proper visual composition.
-        return second
-    }
+    override val cacheSize: Int get() = effectCache.size
 
     internal companion object {
         /**
@@ -139,33 +125,48 @@ internal class SkiaShaderFactory(
                         builder.uniform(uniform.name, uniform.values)
                     }
 
+                    is MatrixUniform -> {
+                        builder.uniform(uniform.name, uniform.values)
+                    }
+
                     is IntUniform -> {
-                        // Skia's RuntimeShaderBuilder doesn't have a direct int array overload,
-                        // so we handle different sizes explicitly
                         when (uniform.values.size) {
                             1 -> {
                                 builder.uniform(uniform.name, uniform.values[0])
                             }
 
                             2 -> {
+                                builder.uniform(uniform.name, uniform.values[0], uniform.values[1])
+                            }
+
+                            3 -> {
                                 builder.uniform(
                                     uniform.name,
                                     uniform.values[0],
                                     uniform.values[1],
+                                    uniform.values[2],
                                 )
                             }
 
-                            else -> {
-                                builder.uniform(uniform.name, uniform.values[0])
-                            }
+                            4 -> {
+                                builder.uniform(
+                                    uniform.name,
+                                    uniform.values[0],
+                                    uniform.values[1],
+                            uniform.values[2],
+                            uniform.values[3]
+                        )
                         }
+
+                        else ->
+                            builder.uniform(
+                            uniform.name,
+                            uniform.values[0]
+                        ) // AGSL/SkSL vectors cap at vec4
+                    }
                     }
 
-                    is ColorUniform -> {
-                        // Skia doesn't have native color uniform support,
-                        // so we pass as vec4 (r, g, b, a)
-                        builder.uniform(uniform.name, uniform.toFloatArray())
-                    }
+                    is ColorUniform -> builder.uniform(uniform.name, uniform.toFloatArray())
                 }
             }
         }

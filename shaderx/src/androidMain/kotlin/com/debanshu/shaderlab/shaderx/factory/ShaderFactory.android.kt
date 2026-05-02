@@ -14,6 +14,7 @@ import com.debanshu.shaderlab.shaderx.result.ShaderResult
 import com.debanshu.shaderlab.shaderx.uniform.ColorUniform
 import com.debanshu.shaderlab.shaderx.uniform.FloatUniform
 import com.debanshu.shaderlab.shaderx.uniform.IntUniform
+import com.debanshu.shaderlab.shaderx.uniform.MatrixUniform
 import com.debanshu.shaderlab.shaderx.uniform.Uniform
 import android.graphics.RenderEffect as AndroidRenderEffect
 
@@ -22,9 +23,8 @@ import android.graphics.RenderEffect as AndroidRenderEffect
  *
  * Requires Android 13 (API 33) or higher for RuntimeShader support.
  *
- * This implementation caches compiled shaders by source code to avoid
- * recompilation on every frame. Shader compilation is expensive, but
- * setting uniforms is cheap.
+ * Compiled shaders are cached in a real access-order LRU ([LruCache]) so frequently-used
+ * shaders are never evicted while stale ones are. Cache access is fully synchronized.
  *
  * @param maxCacheSize Maximum number of shaders to cache (default: 50)
  */
@@ -32,13 +32,15 @@ internal class AndroidShaderFactory(
     maxCacheSize: Int = DEFAULT_CACHE_SIZE,
 ) : BaseShaderFactory(maxCacheSize) {
     /**
-     * Cache of compiled RuntimeShaders keyed by shader source code.
-     * Shader compilation is the expensive operation, so we cache compiled shaders
-     * and just update uniforms each frame.
-     *
-     * Uses LinkedHashMap to maintain insertion order for LRU eviction.
+     * Access-order LRU cache of compiled RuntimeShaders keyed by shader source code.
+     * Shader compilation is the expensive operation; updating uniforms is cheap.
      */
-    private val shaderCache = linkedMapOf<String, RuntimeShader>()
+    private val shaderCache = LruCache<String, RuntimeShader>(maxCacheSize)
+
+    // Aligns with isSupported() — both require API 33. The old S (API 31) check was dead
+    // code because isSupported() gates the entire createRenderEffect path at API 33+.
+    override val supportsChaining: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
     override fun createNativeEffect(effect: NativeEffect): ShaderResult<RenderEffect> =
         when (effect) {
@@ -51,8 +53,8 @@ internal class AndroidShaderFactory(
                     ShaderError.UnsupportedEffect(
                         "Unsupported native effect: ${effect::class.simpleName}",
                         effect.id,
-                    ),
-                )
+                ),
+            )
             }
         }
 
@@ -89,14 +91,11 @@ internal class AndroidShaderFactory(
         }
 
     /**
-     * Gets a cached RuntimeShader or creates and caches a new one.
-     * Shader compilation is expensive, so caching provides significant performance benefits.
+     * Gets a cached RuntimeShader or creates and caches a new one via the LRU cache.
+     * The LRU handles eviction automatically.
      */
-    private fun getOrCreateShader(source: String): RuntimeShader =
-        shaderCache.getOrPut(source) {
-            evictIfNeeded(shaderCache)
-            RuntimeShader(source)
-        }
+    internal fun getOrCreateShader(source: String): RuntimeShader =
+        shaderCache.getOrPut(source) { RuntimeShader(source) }
 
     override fun isSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
@@ -105,24 +104,26 @@ internal class AndroidShaderFactory(
             "Shader effects require Android 13 or higher on this device",
         )
 
-    override fun clearCache() {
-        shaderCache.clear()
-    }
+    override fun clearCache() = shaderCache.clear()
 
-    override val cacheSize: Int
-        get() = shaderCache.size
+    /** Releases all compiled shader objects held by this factory. */
+    override fun close() = shaderCache.clear()
 
+    override val cacheSize: Int get() = shaderCache.size
+
+    // chainEffects is only called when supportsChaining == true (i.e. API 33+),
+    // so createChainEffect (API 31) is always available here.
+    @Suppress("NewApi")
     override fun chainEffects(
-        first: RenderEffect,
-        second: RenderEffect,
-    ): RenderEffect =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val firstNative = first.asAndroidRenderEffect()
-            val secondNative = second.asAndroidRenderEffect()
-            AndroidRenderEffect.createChainEffect(secondNative, firstNative).asComposeRenderEffect()
-        } else {
-            second
-        }
+        inner: RenderEffect,
+        outer: RenderEffect,
+    ): RenderEffect {
+        val innerNative = inner.asAndroidRenderEffect()
+        val outerNative = outer.asAndroidRenderEffect()
+        return AndroidRenderEffect
+            .createChainEffect(outerNative, innerNative)
+            .asComposeRenderEffect()
+    }
 
     internal companion object {
         /**
@@ -142,16 +143,20 @@ internal class AndroidShaderFactory(
                         shader.setIntUniform(uniform.name, uniform.values)
                     }
 
+                    is MatrixUniform -> {
+                        shader.setFloatUniform(uniform.name, uniform.values)
+                    }
+
                     is ColorUniform -> {
                         shader.setColorUniform(
                             uniform.name,
                             android.graphics.Color.valueOf(
-                                uniform.red,
-                                uniform.green,
-                                uniform.blue,
-                                uniform.alpha,
-                            ),
-                        )
+                            uniform.red,
+                            uniform.green,
+                            uniform.blue,
+                            uniform.alpha,
+                        ),
+                    )
                     }
                 }
             }

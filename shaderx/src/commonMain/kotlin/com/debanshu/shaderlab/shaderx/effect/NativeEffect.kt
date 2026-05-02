@@ -1,5 +1,6 @@
 package com.debanshu.shaderlab.shaderx.effect
 
+import androidx.compose.runtime.Stable
 import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
 
 /**
@@ -14,12 +15,12 @@ import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
  *
  * @see BlurEffect for the built-in native blur implementation
  */
+@Stable
 public interface NativeEffect : ShaderEffect {
-    override fun withParameter(parameterId: String, value: Float): NativeEffect
-
-    override fun withTypedParameter(parameterId: String, value: ParameterValue): NativeEffect {
-        return withParameter(parameterId, value.toFloat())
-    }
+    override fun withTypedParameter(
+        parameterId: String,
+        value: ParameterValue,
+    ): NativeEffect
 }
 
 /**
@@ -31,6 +32,7 @@ public interface NativeEffect : ShaderEffect {
  * Both implementations are hardware-accelerated and more efficient
  * than a custom blur shader.
  */
+@Stable
 public interface BlurEffect : NativeEffect {
     /**
      * Blur radius in pixels.
@@ -39,9 +41,7 @@ public interface BlurEffect : NativeEffect {
      */
     public val radius: Float
 
-    override fun withParameter(parameterId: String, value: Float): BlurEffect
-
-    override fun withTypedParameter(parameterId: String, value: ParameterValue): BlurEffect {
-        return withParameter(parameterId, value.toFloat())
-    }
+    override fun withTypedParameter(
+        parameterId: String,
+        value: ParameterValue): BlurEffect
 }

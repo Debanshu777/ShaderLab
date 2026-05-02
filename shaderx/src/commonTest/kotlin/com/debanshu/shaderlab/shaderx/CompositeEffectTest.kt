@@ -1,6 +1,7 @@
 package com.debanshu.shaderlab.shaderx
 
 import com.debanshu.shaderlab.shaderx.effect.CompositeEffect
+import com.debanshu.shaderlab.shaderx.effect.CompositeEffect.Companion.DELIMITER
 import com.debanshu.shaderlab.shaderx.effect.impl.GrayscaleEffect
 import com.debanshu.shaderlab.shaderx.effect.impl.NativeBlurEffect
 import com.debanshu.shaderlab.shaderx.effect.impl.VignetteEffect
@@ -72,24 +73,24 @@ class CompositeEffectTest {
     fun compositeEffect_parameters_prefixesWithIndex() {
         val effect = GrayscaleEffect() + VignetteEffect()
 
-        // GrayscaleEffect has "intensity" -> "0_intensity"
-        // VignetteEffect has "radius" and "intensity" -> "1_radius", "1_intensity"
+        // GrayscaleEffect has "intensity" -> "0${DELIMITER}intensity"
+        // VignetteEffect has "radius" and "intensity" -> "1${DELIMITER}radius", "1${DELIMITER}intensity"
         val paramIds = effect.parameters.map { it.id }
 
-        assertTrue(paramIds.contains("0_intensity"))
-        assertTrue(paramIds.contains("1_radius"))
-        assertTrue(paramIds.contains("1_intensity"))
+        assertTrue(paramIds.contains("0${DELIMITER}intensity"))
+        assertTrue(paramIds.contains("1${DELIMITER}radius"))
+        assertTrue(paramIds.contains("1${DELIMITER}intensity"))
     }
 
     @Test
     fun compositeEffect_withParameter_updatesCorrectEffect() {
         val effect = GrayscaleEffect(intensity = 0.5f) + VignetteEffect(radius = 0.5f)
 
-        val updated = effect.withParameter("1_radius", 0.8f)
+        val updated = effect.withParameter("1${DELIMITER}radius", 0.8f)
 
         assertNotEquals(effect, updated)
-        assertEquals(0.8f, updated.getParameterValue("1_radius"))
-        assertEquals(0.5f, updated.getParameterValue("0_intensity"))
+        assertEquals(0.8f, updated.getParameterValue("1${DELIMITER}radius"))
+        assertEquals(0.5f, updated.getParameterValue("0${DELIMITER}intensity"))
     }
 
     @Test
@@ -98,13 +99,13 @@ class CompositeEffectTest {
 
         val updated =
             effect.withTypedParameter(
-                "0_intensity",
+                "0${DELIMITER}intensity",
                 ParameterValue.FloatValue(0.9f),
             )
 
         assertNotEquals(effect, updated)
 
-        val value = updated.getTypedParameterValue("0_intensity")
+        val value = updated.getTypedParameterValue("0${DELIMITER}intensity")
         assertTrue(value is ParameterValue.FloatValue)
         assertEquals(0.9f, (value as ParameterValue.FloatValue).value)
     }
@@ -113,16 +114,20 @@ class CompositeEffectTest {
     fun compositeEffect_getParameterValue_returnsCorrectValue() {
         val effect = GrayscaleEffect(intensity = 0.7f) + VignetteEffect(radius = 0.3f)
 
-        assertEquals(0.7f, effect.getParameterValue("0_intensity"))
-        assertEquals(0.3f, effect.getParameterValue("1_radius"))
+        assertEquals(0.7f, effect.getParameterValue("0${DELIMITER}intensity"))
+        assertEquals(0.3f, effect.getParameterValue("1${DELIMITER}radius"))
     }
 
     @Test
     fun compositeEffect_getParameterValue_returnsZeroForUnknown() {
         val effect = GrayscaleEffect() + VignetteEffect()
 
-        assertEquals(0f, effect.getParameterValue("invalid_param"))
-        assertEquals(0f, effect.getParameterValue("99_intensity"))
+        // Both contain no DELIMITER so parseParameterId returns null → 0f
+        assertEquals(0f, effect.getParameterValue("invalidparam"))
+        assertEquals(
+            0f,
+            effect.getParameterValue("99${DELIMITER}intensity"),
+        ) // valid format but out of range index
     }
 
     @Test

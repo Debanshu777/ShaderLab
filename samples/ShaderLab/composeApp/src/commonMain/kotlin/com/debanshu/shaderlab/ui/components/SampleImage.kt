@@ -5,11 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import org.jetbrains.compose.resources.painterResource
-import shaderlab.samples.shaderlab.composeapp.generated.resources.Res
-import shaderlab.samples.shaderlab.composeapp.generated.resources.sample_abstract
-import shaderlab.samples.shaderlab.composeapp.generated.resources.sample_landscape
-import shaderlab.samples.shaderlab.composeapp.generated.resources.sample_nature
-import shaderlab.samples.shaderlab.composeapp.generated.resources.sample_portrait
+import shaderxproject.samples.shaderlab.composeapp.generated.resources.Res
+import shaderxproject.samples.shaderlab.composeapp.generated.resources.sample_abstract
+import shaderxproject.samples.shaderlab.composeapp.generated.resources.sample_landscape
+import shaderxproject.samples.shaderlab.composeapp.generated.resources.sample_nature
+import shaderxproject.samples.shaderlab.composeapp.generated.resources.sample_portrait
 
 @Composable
 fun SampleImage(

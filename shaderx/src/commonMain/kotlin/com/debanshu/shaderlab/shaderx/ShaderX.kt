@@ -58,7 +58,7 @@ public object ShaderX {
             VignetteEffect(),
             PixelateEffect(),
             ChromaticAberrationEffect(),
-            InvertEffect,
+            InvertEffect(),
             WaveEffect(),
             NativeBlurEffect(),
         )
@@ -67,8 +67,24 @@ public object ShaderX {
     /**
      * Returns all built-in effects.
      *
-     * This returns a cached list of effect instances. For effects that need
-     * fresh instances with specific parameters, create them directly.
+     * **Shared list:** Every call returns the same cached [List] instance — the list itself
+     * is unmodifiable. The effect instances inside are [androidx.compose.runtime.Immutable]:
+     * calling [com.debanshu.shaderlab.shaderx.effect.ShaderEffect.withParameter] or
+     * [com.debanshu.shaderlab.shaderx.effect.ShaderEffect.withTypedParameter] always returns a
+     * new instance and never mutates the cached one. It is safe to use these instances as starting
+     * points for parameter customisation.
+     *
+     * **Animated effects:** [com.debanshu.shaderlab.shaderx.effect.impl.WaveEffect] in the list
+     * starts with `time = 0f` and `animate = true`. Pass it through
+     * [com.debanshu.shaderlab.shaderx.compose.rememberShaderEffect] in a composable to drive
+     * the animation loop.
+     *
+     * For effects that need different initial parameters, create them directly instead of
+     * modifying items from this list:
+     * ```kotlin
+     * val softBlur = NativeBlurEffect(radius = 3f)      // custom default
+     * val builtIn  = ShaderX.builtInEffects()           // shared cached instances
+     * ```
      */
     public fun builtInEffects(): List<ShaderEffect> = cachedBuiltInEffects
 }

@@ -1,8 +1,9 @@
 package com.debanshu.shaderlab.shaderx.effect.impl
 
-import com.debanshu.shaderlab.shaderx.effect.RuntimeShaderEffect
-import com.debanshu.shaderlab.shaderx.parameter.ParameterSpec
-import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
+import androidx.compose.runtime.Immutable
+import com.debanshu.shaderlab.shaderx.effect.AbstractRuntimeShaderEffect
+import com.debanshu.shaderlab.shaderx.effect.ParamHandler
+import com.debanshu.shaderlab.shaderx.effect.floatHandler
 import com.debanshu.shaderlab.shaderx.parameter.PixelParameter
 import com.debanshu.shaderlab.shaderx.uniform.FloatUniform
 import com.debanshu.shaderlab.shaderx.uniform.Uniform
@@ -14,9 +15,10 @@ import com.debanshu.shaderlab.shaderx.uniform.Uniform
  *
  * @property offset Distance in pixels to offset red and blue channels
  */
+@Immutable
 public data class ChromaticAberrationEffect(
-    private val offset: Float = 5f,
-) : RuntimeShaderEffect {
+    public val offset: Float = 5f,
+) : AbstractRuntimeShaderEffect() {
     override val id: String = ID
     override val displayName: String = "Chromatic"
 
@@ -25,30 +27,35 @@ public data class ChromaticAberrationEffect(
         uniform shader content;
         uniform float2 resolution;
         uniform float offset;
-        
+
         half4 main(float2 fragCoord) {
             // Calculate direction from center
             float2 center = resolution * 0.5;
             float2 dir = normalize(fragCoord - center);
-            
-            // Sample each color channel with offset
+
+            // Sample each color channel with offset — reuse center sample for g and a (L2 fix)
+            half4 center_sample = content.eval(fragCoord);
             float r = content.eval(fragCoord + dir * offset).r;
-            float g = content.eval(fragCoord).g;
             float b = content.eval(fragCoord - dir * offset).b;
-            float a = content.eval(fragCoord).a;
-            
-            return half4(r, g, b, a);
+
+            return half4(r, center_sample.g, b, center_sample.a);
         }
         """.trimIndent()
 
-    override val parameters: List<ParameterSpec> =
-        listOf(
-            PixelParameter(
-                id = PARAM_OFFSET,
-                label = "Offset",
-                range = 0f..20f,
-                defaultValue = offset,
-            ),
+    override val parameterHandlers: Map<String, ParamHandler<*>> =
+        mapOf(
+            PARAM_OFFSET to
+                floatHandler<ChromaticAberrationEffect>(
+                    spec =
+                        PixelParameter(
+                            id = PARAM_OFFSET,
+                            label = "Offset",
+                            range = 0f..20f,
+                            defaultValue = 5f,
+                        ),
+                    read = { it.offset },
+                    write = { e, v -> e.copy(offset = v) },
+                ),
         )
 
     override fun buildUniforms(
@@ -59,38 +66,6 @@ public data class ChromaticAberrationEffect(
             FloatUniform("resolution", width, height),
             FloatUniform("offset", offset),
         )
-
-    override fun withParameter(
-        parameterId: String,
-        value: Float,
-    ): ChromaticAberrationEffect =
-        when (parameterId) {
-            PARAM_OFFSET -> copy(offset = value)
-            else -> this
-        }
-
-    override fun withTypedParameter(
-        parameterId: String,
-        value: ParameterValue,
-    ): ChromaticAberrationEffect =
-        when (parameterId) {
-            PARAM_OFFSET -> {
-                when (value) {
-                    is ParameterValue.FloatValue -> copy(offset = value.value)
-                    else -> this
-                }
-            }
-
-            else -> {
-                this
-            }
-        }
-
-    override fun getTypedParameterValue(parameterId: String): ParameterValue? =
-        when (parameterId) {
-            PARAM_OFFSET -> ParameterValue.FloatValue(offset)
-            else -> null
-        }
 
     public companion object {
         public const val ID: String = "chromatic_aberration"

@@ -1,7 +1,10 @@
 package com.debanshu.shaderlab.shaderx.effect.impl
 
+import androidx.compose.runtime.Immutable
+import com.debanshu.shaderlab.shaderx.effect.AbstractNativeEffect
 import com.debanshu.shaderlab.shaderx.effect.BlurEffect
-import com.debanshu.shaderlab.shaderx.parameter.ParameterSpec
+import com.debanshu.shaderlab.shaderx.effect.NativeParamHandler
+import com.debanshu.shaderlab.shaderx.effect.nativeFloatHandler
 import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
 import com.debanshu.shaderlab.shaderx.parameter.PixelParameter
 
@@ -13,53 +16,41 @@ import com.debanshu.shaderlab.shaderx.parameter.PixelParameter
  *
  * @property radius Blur radius in pixels (minimum 0.1)
  */
+@Immutable
 public data class NativeBlurEffect(
     override val radius: Float = 10f,
-) : BlurEffect {
+) : AbstractNativeEffect(),
+    BlurEffect {
     override val id: String = ID
     override val displayName: String = "Blur"
 
-    override val parameters: List<ParameterSpec> =
-        listOf(
-            PixelParameter(
-                id = PARAM_RADIUS,
-                label = "Radius",
-                range = 0f..50f,
-                defaultValue = radius,
-            ),
+    override val parameterHandlers: Map<String, NativeParamHandler<*>> =
+        mapOf(
+            PARAM_RADIUS to
+                nativeFloatHandler<NativeBlurEffect>(
+                    spec =
+                        PixelParameter(
+                            id = PARAM_RADIUS,
+                            label = "Radius",
+                            range = 0f..50f,
+                            defaultValue = 10f,
+                        ),
+                    read = { it.radius },
+                    write = { e, v -> e.copy(radius = v) },
+                ),
         )
 
-    override fun withParameter(
-        parameterId: String,
-        value: Float,
-    ): NativeBlurEffect =
-        when (parameterId) {
-            PARAM_RADIUS -> copy(radius = value)
-            else -> this
-        }
-
+    // Covariant return type — base class dispatch handles the actual logic.
     override fun withTypedParameter(
         parameterId: String,
         value: ParameterValue,
-    ): NativeBlurEffect =
-        when (parameterId) {
-            PARAM_RADIUS -> {
-                when (value) {
-                    is ParameterValue.FloatValue -> copy(radius = value.value)
-                    else -> this
-                }
-            }
+    ): NativeBlurEffect = super.withTypedParameter(parameterId, value) as NativeBlurEffect
 
-            else -> {
-                this
-            }
-        }
-
-    override fun getTypedParameterValue(parameterId: String): ParameterValue? =
-        when (parameterId) {
-            PARAM_RADIUS -> ParameterValue.FloatValue(radius)
-            else -> null
-        }
+    // Covariant return type for the Float convenience path.
+    override fun withParameter(
+        parameterId: String,
+        value: Float,
+    ): NativeBlurEffect = withTypedParameter(parameterId, ParameterValue.FloatValue(value))
 
     public companion object {
         public const val ID: String = "blur"

@@ -1,8 +1,12 @@
 package com.debanshu.shaderlab.shaderx.effect.impl
 
+import androidx.compose.runtime.Immutable
+import com.debanshu.shaderlab.shaderx.effect.AbstractRuntimeShaderEffect
 import com.debanshu.shaderlab.shaderx.effect.AnimatedShaderEffect
+import com.debanshu.shaderlab.shaderx.effect.ParamHandler
+import com.debanshu.shaderlab.shaderx.effect.floatHandler
+import com.debanshu.shaderlab.shaderx.effect.toggleHandler
 import com.debanshu.shaderlab.shaderx.parameter.FloatParameter
-import com.debanshu.shaderlab.shaderx.parameter.ParameterSpec
 import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
 import com.debanshu.shaderlab.shaderx.parameter.PixelParameter
 import com.debanshu.shaderlab.shaderx.parameter.ToggleParameter
@@ -14,17 +18,24 @@ import com.debanshu.shaderlab.shaderx.uniform.Uniform
  *
  * Creates a wavy, liquid-like appearance.
  *
+ * ### Equality contract
+ * Two [WaveEffect] instances are equal if their **configuration** parameters are equal,
+ * regardless of [time]. This allows `LaunchedEffect(effect)` in animation loops to see
+ * the effect as stable across frames — only the uniforms change, not the effect identity.
+ *
  * @property amplitude Maximum displacement in pixels
  * @property frequency Number of wave cycles across the image
  * @property animate Whether the effect should animate
- * @property time Current animation time in seconds
+ * @property time Current animation time in seconds (excluded from equality / hashCode)
  */
+@Immutable
 public data class WaveEffect(
-    private val amplitude: Float = 10f,
-    private val frequency: Float = 5f,
-    private val animate: Boolean = true,
+    public val amplitude: Float = 10f,
+    public val frequency: Float = 5f,
+    public val animate: Boolean = true,
     override val time: Float = 0f,
-) : AnimatedShaderEffect {
+) : AbstractRuntimeShaderEffect(),
+    AnimatedShaderEffect {
     override val id: String = ID
     override val displayName: String = "Wave"
     override val isAnimating: Boolean = animate
@@ -36,42 +47,60 @@ public data class WaveEffect(
         uniform float amplitude;
         uniform float frequency;
         uniform float time;
-        
+
         half4 main(float2 fragCoord) {
             float2 uv = fragCoord / resolution;
-            
+
             // Apply wave distortion
             float xOffset = sin(uv.y * frequency + time) * amplitude;
             float yOffset = cos(uv.x * frequency + time) * amplitude;
-            
+
             float2 distortedCoord = fragCoord + float2(xOffset, yOffset);
-            
+
             // Clamp to valid range
             distortedCoord = clamp(distortedCoord, float2(0.0), resolution);
-            
+
             return content.eval(distortedCoord);
         }
         """.trimIndent()
 
-    override val parameters: List<ParameterSpec> =
-        listOf(
-            PixelParameter(
-                id = PARAM_AMPLITUDE,
-                label = "Amplitude",
-                range = 0f..50f,
-                defaultValue = amplitude,
-            ),
-            FloatParameter(
-                id = PARAM_FREQUENCY,
-                label = "Frequency",
-                range = 1f..20f,
-                defaultValue = frequency,
-            ),
-            ToggleParameter(
-                id = PARAM_ANIMATE,
-                label = "Animate",
-                isEnabledByDefault = animate,
-            ),
+    override val parameterHandlers: Map<String, ParamHandler<*>> =
+        mapOf(
+            PARAM_AMPLITUDE to
+                floatHandler<WaveEffect>(
+                    spec =
+                        PixelParameter(
+                            id = PARAM_AMPLITUDE,
+                            label = "Amplitude",
+                            range = 0f..50f,
+                            defaultValue = 10f,
+                        ),
+                    read = { it.amplitude },
+                    write = { e, v -> e.copy(amplitude = v) },
+                ),
+            PARAM_FREQUENCY to
+                floatHandler<WaveEffect>(
+                    spec =
+                        FloatParameter(
+                            id = PARAM_FREQUENCY,
+                            label = "Frequency",
+                            range = 1f..20f,
+                            defaultValue = 5f,
+                        ),
+                    read = { it.frequency },
+                    write = { e, v -> e.copy(frequency = v) },
+                ),
+            PARAM_ANIMATE to
+                toggleHandler<WaveEffect>(
+                    spec =
+                        ToggleParameter(
+                            id = PARAM_ANIMATE,
+                            label = "Animate",
+                            isEnabledByDefault = true,
+                        ),
+                    read = { it.animate },
+                    write = { e, v -> e.copy(animate = v) },
+                ),
         )
 
     override fun buildUniforms(
@@ -85,58 +114,35 @@ public data class WaveEffect(
             FloatUniform("time", time),
         )
 
-    override fun withParameter(
-        parameterId: String,
-        value: Float,
-    ): WaveEffect =
-        when (parameterId) {
-            PARAM_AMPLITUDE -> copy(amplitude = value)
-            PARAM_FREQUENCY -> copy(frequency = value)
-            PARAM_ANIMATE -> copy(animate = value > 0.5f)
-            else -> this
-        }
+    override fun withTime(newTime: Float): WaveEffect = copy(time = newTime)
 
+    // AnimatedShaderEffect requires withTypedParameter to return AnimatedShaderEffect.
+    // AbstractRuntimeShaderEffect.withTypedParameter returns AbstractRuntimeShaderEffect.
+    // We bridge by delegating to the base and casting — safe because this is the only
+    // concrete AnimatedShaderEffect in the sealed hierarchy.
     override fun withTypedParameter(
         parameterId: String,
         value: ParameterValue,
-    ): WaveEffect =
-        when (parameterId) {
-            PARAM_AMPLITUDE -> {
-                when (value) {
-                    is ParameterValue.FloatValue -> copy(amplitude = value.value)
-                    else -> this
-                }
-            }
+    ): WaveEffect = super.withTypedParameter(parameterId, value) as WaveEffect
 
-            PARAM_FREQUENCY -> {
-                when (value) {
-                    is ParameterValue.FloatValue -> copy(frequency = value.value)
-                    else -> this
-                }
-            }
+    /**
+     * Two [WaveEffect] instances are equal if their configuration parameters are equal.
+     * [time] is intentionally excluded — it is a render-frame property that changes every
+     * frame during animation. Excluding it prevents `LaunchedEffect(effect)` from restarting
+     * every frame in the animation loop in [rememberShaderEffect].
+     */
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is WaveEffect) return false
+        return amplitude == other.amplitude && frequency == other.frequency && animate == other.animate
+    }
 
-            PARAM_ANIMATE -> {
-                when (value) {
-                    is ParameterValue.BooleanValue -> copy(animate = value.enabled)
-                    is ParameterValue.FloatValue -> copy(animate = value.value > 0.5f)
-                    else -> this
-                }
-            }
-
-            else -> {
-                this
-            }
-        }
-
-    override fun getTypedParameterValue(parameterId: String): ParameterValue? =
-        when (parameterId) {
-            PARAM_AMPLITUDE -> ParameterValue.FloatValue(amplitude)
-            PARAM_FREQUENCY -> ParameterValue.FloatValue(frequency)
-            PARAM_ANIMATE -> ParameterValue.BooleanValue(animate)
-            else -> null
-        }
-
-    override fun withTime(newTime: Float): WaveEffect = copy(time = newTime)
+    override fun hashCode(): Int {
+        var result = amplitude.hashCode()
+        result = 31 * result + frequency.hashCode()
+        result = 31 * result + animate.hashCode()
+        return result
+    }
 
     public companion object {
         public const val ID: String = "wave_distortion"

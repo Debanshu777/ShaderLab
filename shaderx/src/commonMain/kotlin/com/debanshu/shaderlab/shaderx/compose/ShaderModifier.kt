@@ -2,6 +2,7 @@ package com.debanshu.shaderlab.shaderx.compose
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -11,10 +12,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import com.debanshu.shaderlab.shaderx.effect.AnimatedShaderEffect
 import com.debanshu.shaderlab.shaderx.effect.ShaderEffect
 import com.debanshu.shaderlab.shaderx.factory.ShaderFactory
-import com.debanshu.shaderlab.shaderx.factory.create
 import com.debanshu.shaderlab.shaderx.result.ShaderError
 import com.debanshu.shaderlab.shaderx.result.ShaderResult
 import kotlinx.coroutines.isActive
@@ -49,28 +50,51 @@ import kotlinx.coroutines.isActive
  * )
  * ```
  *
+ * ## First-frame behavior
+ * By default, the effect is not applied on the very first frame because the composable
+ * must be measured via `onSizeChanged` (which fires after layout) before shader dimensions
+ * are known. For static images this is imperceptible (~16 ms). To avoid the skip entirely,
+ * pass a pre-known [knownSize]:
+ * ```kotlin
+ * Image(
+ *     painter = painterResource("photo.png"),
+ *     modifier = Modifier.shaderEffect(
+ *         effect = GrayscaleEffect(),
+ *         knownSize = IntSize(width, height),
+ *     )
+ * )
+ * ```
+ *
  * @param effect The shader effect to apply, or null to disable
- * @param factory The factory to use for creating render effects (defaults to platform factory).
- *   Use a shared factory (e.g. `val factory = remember { ShaderFactory.create() }` at a
- *   higher scope) to share the shader cache across multiple composables.
+ * @param factory The factory to use for creating render effects. Defaults to [LocalShaderFactory],
+ *   which provides a process-wide shared cache. Override with [rememberShaderFactory] to scope
+ *   the cache to a subtree.
+ * @param knownSize When non-null, this size is used directly for uniform calculations and the
+ *   effect is applied from the first frame. When null (default), the composable measures itself
+ *   via `onSizeChanged` and the effect is applied one frame after layout.
  * @param onError Optional callback invoked when shader creation fails
  * @return Modifier with the shader effect applied
  */
 @Composable
 public fun Modifier.shaderEffect(
     effect: ShaderEffect?,
-    factory: ShaderFactory = remember { ShaderFactory.create() },
+    factory: ShaderFactory = LocalShaderFactory.current,
+    knownSize: IntSize? = null,
     onError: ((ShaderError) -> Unit)? = null,
 ): Modifier {
     if (effect == null) return this
 
-    var size by remember { mutableStateOf(Pair(0f, 0f)) }
+    var measuredSize by remember { mutableStateOf(Pair(0f, 0f)) }
     var renderEffect by remember { mutableStateOf<RenderEffect?>(null) }
 
-    // Update render effect when size or effect changes
-    LaunchedEffect(effect, size) {
-        if (size.first > 0 && size.second > 0) {
-            val result = factory.createRenderEffect(effect, size.first, size.second)
+    val effectWidth = knownSize?.width?.toFloat() ?: measuredSize.first
+    val effectHeight = knownSize?.height?.toFloat() ?: measuredSize.second
+
+    // LaunchedEffect is called unconditionally (same number of composable calls regardless
+    // of whether knownSize is provided) to satisfy Compose's stable-call-count rule.
+    LaunchedEffect(effect, effectWidth, effectHeight) {
+        if (effectWidth > 0 && effectHeight > 0) {
+            val result = factory.createRenderEffect(effect, effectWidth, effectHeight)
             result
                 .onSuccess { renderEffect = it }
                 .onFailure { error ->
@@ -80,13 +104,18 @@ public fun Modifier.shaderEffect(
         }
     }
 
-    return this
-        .onSizeChanged { newSize ->
-            size = Pair(newSize.width.toFloat(), newSize.height.toFloat())
-        }
-        .graphicsLayer {
-            this.renderEffect = renderEffect
-        }
+    // Conditionally attach onSizeChanged only when size is not pre-known.
+    // This is a plain Kotlin if-expression in the modifier chain, not a conditional
+    // composable call, so it does not violate the rules of Compose.
+    return (
+        if (knownSize == null) {
+            this.onSizeChanged { newSize ->
+                measuredSize = Pair(newSize.width.toFloat(), newSize.height.toFloat())
+            }
+        } else {
+            this
+    }
+    ).graphicsLayer { this.renderEffect = renderEffect }
 }
 
 /**
@@ -114,37 +143,41 @@ public fun Modifier.shaderEffect(
  * ```
  *
  * @param effect The shader effect to apply, or null to disable
- * @param factory The factory to use for creating render effects (defaults to platform factory)
+ * @param factory The factory to use for creating render effects. Defaults to [LocalShaderFactory].
+ * @param knownSize When non-null, this size is used directly and the effect is applied from the
+ *   first frame. When null (default), size is measured via `onSizeChanged` (one-frame skip).
  * @param onResult Callback invoked with the shader result (success or failure)
  * @return Modifier with the shader effect applied
  */
 @Composable
 public fun Modifier.shaderEffectWithResult(
     effect: ShaderEffect?,
-    factory: ShaderFactory = remember { ShaderFactory.create() },
+    factory: ShaderFactory = LocalShaderFactory.current,
+    knownSize: IntSize? = null,
     onResult: ((ShaderResult<RenderEffect>) -> Unit)? = null,
 ): Modifier {
     if (effect == null) return this
 
-    var size by remember { mutableStateOf(Pair(0f, 0f)) }
+    var measuredSize by remember { mutableStateOf(Pair(0f, 0f)) }
     var renderEffect by remember { mutableStateOf<RenderEffect?>(null) }
 
-    // Update render effect when size or effect changes
-    LaunchedEffect(effect, size) {
-        if (size.first > 0 && size.second > 0) {
-            val result = factory.createRenderEffect(effect, size.first, size.second)
+    val effectWidth = knownSize?.width?.toFloat() ?: measuredSize.first
+    val effectHeight = knownSize?.height?.toFloat() ?: measuredSize.second
+
+    LaunchedEffect(effect, effectWidth, effectHeight) {
+        if (effectWidth > 0 && effectHeight > 0) {
+            val result = factory.createRenderEffect(effect, effectWidth, effectHeight)
             onResult?.invoke(result)
             renderEffect = result.getOrNull()
         }
     }
 
-    return this
-        .onSizeChanged { newSize ->
-            size = Pair(newSize.width.toFloat(), newSize.height.toFloat())
-        }
-        .graphicsLayer {
-            this.renderEffect = renderEffect
-        }
+    return (
+        if (knownSize == null) {
+            this.onSizeChanged { newSize ->
+                measuredSize = Pair(newSize.width.toFloat(), newSize.height.toFloat())
+    }
+    } else this).graphicsLayer { this.renderEffect = renderEffect }
 }
 
 /**
@@ -170,21 +203,20 @@ public fun Modifier.shaderEffectWithResult(
 public fun <T : ShaderEffect> rememberShaderEffect(effect: T): T {
     var currentEffect by remember { mutableStateOf(effect) }
 
-    // Update if the base effect changes (parameters changed)
-    LaunchedEffect(effect) {
-        currentEffect = effect
-    }
+    // Synchronously update currentEffect when caller changes parameters (M4 fix: SideEffect
+    // instead of LaunchedEffect — the assignment is synchronous and doesn't need a coroutine)
+    SideEffect { currentEffect = effect }
 
-    // Handle animation
+    // Handle animation — keyed by effect.id and isAnimating, not by the full effect instance,
+    // so the loop is not torn down every frame when time changes (Phase 4 fix)
     if (effect is AnimatedShaderEffect && effect.isAnimating) {
         LaunchedEffect(effect.id, effect.isAnimating) {
             while (isActive) {
                 withFrameMillis { frameTime ->
-                    val timeSeconds = frameTime / 1000f
                     val animated = currentEffect as? AnimatedShaderEffect
                     if (animated != null) {
                         @Suppress("UNCHECKED_CAST")
-                        currentEffect = animated.withTime(timeSeconds) as T
+                        currentEffect = animated.withTime(frameTime / 1000f) as T
                     }
                 }
             }
@@ -218,7 +250,7 @@ public fun <T : ShaderEffect> rememberShaderEffect(effect: T): T {
  * @param effect The shader effect definition
  * @param width Width of the render target
  * @param height Height of the render target
- * @param factory The factory to use (defaults to platform factory)
+ * @param factory The factory to use. Defaults to [LocalShaderFactory].
  * @return The created RenderEffect, or null if creation failed
  */
 @Composable
@@ -226,7 +258,7 @@ public fun rememberRenderEffect(
     effect: ShaderEffect,
     width: Float,
     height: Float,
-    factory: ShaderFactory = remember { ShaderFactory.create() },
+    factory: ShaderFactory = LocalShaderFactory.current,
 ): RenderEffect? {
     return remember(effect, width, height) {
         if (width > 0 && height > 0) {
@@ -249,7 +281,7 @@ public fun rememberRenderEffect(
  * @param effect The shader effect definition
  * @param width Width of the render target
  * @param height Height of the render target
- * @param factory The factory to use (defaults to platform factory)
+ * @param factory The factory to use. Defaults to [LocalShaderFactory].
  * @return The ShaderResult containing either the effect or error information
  */
 @Composable
@@ -257,7 +289,7 @@ public fun rememberRenderEffectResult(
     effect: ShaderEffect,
     width: Float,
     height: Float,
-    factory: ShaderFactory = remember { ShaderFactory.create() },
+    factory: ShaderFactory = LocalShaderFactory.current,
 ): ShaderResult<RenderEffect>? {
     return remember(effect, width, height) {
         if (width > 0 && height > 0) {

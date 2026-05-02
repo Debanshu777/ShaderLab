@@ -9,13 +9,18 @@ import com.debanshu.shaderlab.shaderx.result.ShaderResult
  * Use this for offline/batch processing of images, as opposed to
  * real-time rendering with [ShaderFactory].
  *
+ * The processor reuses the provided [ShaderFactory]'s shader cache so that
+ * processing N images with the same effect compiles the shader only once.
+ *
  * ## Usage
  * ```kotlin
- * val processor = ImageProcessor.create()
- * val result = processor.process(imageBytes, effect)
+ * val factory = ShaderFactory.create()
+ * val processor = ImageProcessor.create(factory)
+ * val result = processor.process(imageBytes, GrayscaleEffect())
  * result.onSuccess { processedBytes ->
  *     saveImage(processedBytes)
  * }
+ * factory.close()
  * ```
  */
 public interface ImageProcessor {
@@ -27,6 +32,12 @@ public interface ImageProcessor {
      * @param width Optional width override for uniform calculations (uses image width if 0)
      * @param height Optional height override for uniform calculations (uses image height if 0)
      * @return [ShaderResult] containing the processed image bytes or error information
+     *
+     * **Platform support for [com.debanshu.shaderlab.shaderx.effect.CompositeEffect]:**
+     * On Android (API 33+), composite effects are supported via shader chaining.
+     * On iOS and Desktop (Skia-based platforms), passing a [com.debanshu.shaderlab.shaderx.effect.CompositeEffect]
+     * returns [com.debanshu.shaderlab.shaderx.result.ShaderResult.Failure] with
+     * [com.debanshu.shaderlab.shaderx.result.ShaderError.UnsupportedEffect].
      */
     public fun process(
         imageBytes: ByteArray,
@@ -39,8 +50,12 @@ public interface ImageProcessor {
 }
 
 /**
- * Creates the platform-specific [ImageProcessor] instance.
+ * Creates the platform-specific [ImageProcessor] backed by [factory].
  *
- * This is an expect function that each platform implements.
+ * The processor shares [factory]'s compiled-shader cache, so a shader compiled by the
+ * factory's [ShaderFactory.createRenderEffect] path won't be recompiled by the processor
+ * (and vice versa).
+ *
+ * @param factory The [ShaderFactory] whose cache the processor will share.
  */
-public expect fun ImageProcessor.Companion.create(): ImageProcessor
+public expect fun ImageProcessor.Companion.create(factory: ShaderFactory): ImageProcessor

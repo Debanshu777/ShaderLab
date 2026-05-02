@@ -99,10 +99,11 @@ dependencies {
     implementation(libs.landscapist.coil3)
     implementation(libs.landscapist.animation)
     implementation(libs.landscapist.placeholder)
+    implementation(libs.coil.network.okhttp)
 
     // Palette for color extraction
     implementation(libs.androidx.palette)
 
     // ShaderX library
-    implementation("io.github.debanshu777:shaderx:0.1.2")
+    implementation("io.github.debanshu777:shaderx:0.1.3")
 }

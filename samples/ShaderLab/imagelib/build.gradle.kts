@@ -46,7 +46,9 @@ kotlin {
     sourceSets {
         wasmJsMain.dependencies {
             implementation(libs.kotlinx.browser)
-            implementation(libs.skiko.wasm.js)
+            // skiko-wasm-js is provided transitively by Compose Multiplatform ui:1.10.3
+            // at version 0.9.37.4 — do NOT pin it here with the old 0.144.5 version,
+            // as that causes a runtime WebAssembly.instantiate() LinkError.
         }
         commonMain.dependencies {
             implementation(libs.runtime)
