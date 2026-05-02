@@ -52,24 +52,35 @@ internal class SkiaImageProcessor(
                 }
             }
 
-            val result =
-                Surface.makeRasterN32Premul(imageWidth, imageHeight).use { surface ->
-                    Paint().use { paint ->
-                        paint.imageFilter = imageFilter
-                        surface.canvas.drawImage(image, 0f, 0f, paint)
-                    }
-                    val snapshot = surface.makeImageSnapshot()
-                    val data = snapshot.encodeToData(EncodedImageFormat.PNG)
-                    snapshot.close()
-                    data?.bytes?.also { data.close() }
+            // Use explicit try/finally instead of .use {} — Skia's Managed objects have
+            // close() on all targets but do not implement AutoCloseable on WasmJS.
+            val surface = Surface.makeRasterN32Premul(imageWidth, imageHeight)
+            var result: ByteArray? = null
+            try {
+                val paint = Paint()
+                try {
+                    paint.imageFilter = imageFilter
+                    surface.canvas.drawImage(image, 0f, 0f, paint)
+                } finally {
+                    paint.close()
                 }
+                val snapshot = surface.makeImageSnapshot()
+                val data = snapshot.encodeToData(EncodedImageFormat.PNG)
+                snapshot.close()
+                result = data?.bytes?.also { data.close() }
+            } finally {
+                surface.close()
+            }
 
             image.close()
 
-            result?.let { ShaderResult.success(it) }
-                ?: ShaderResult.failure(
+            if (result != null) {
+                ShaderResult.success(result)
+            } else {
+                ShaderResult.failure(
                     ShaderError.ProcessingError("Failed to encode result image"),
                 )
+            }
         } catch (e: Exception) {
             ShaderResult.failure(
                 ShaderError.ProcessingError("Image processing failed: ${e.message}", e),

@@ -24,7 +24,6 @@ materialIconsExtended = "1.7.3"
 mpfilepicker = "3.1.0"
 palette = "1.0.0"
 runtime = "1.10.3"
-skikoWasmJs = "0.144.5"
 ui = "1.10.3"
 vanniktechMavenPublish = "0.36.0"
 dokka = "2.2.0"
@@ -58,7 +57,6 @@ material-icons-extended = { module = "org.jetbrains.compose.material:material-ic
 material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 mpfilepicker = { module = "com.darkrockstudios:mpfilepicker", version.ref = "mpfilepicker" }
 runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "runtime" }
-skiko-wasm-js = { module = "org.jetbrains.skiko:skiko-wasm-js", version.ref = "skikoWasmJs" }
 ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "ui" }
 ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "ui" }
 ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "ui" }
