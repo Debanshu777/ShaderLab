@@ -65,7 +65,7 @@ dependencyResolutionManagement {
 
 // build.gradle.kts (shared module)
 dependencies {
-    implementation("io.github.debanshu777:shaderx:0.1.2")
+  implementation("io.github.debanshu777:shaderx:0.1.3")
 }
 ```
 

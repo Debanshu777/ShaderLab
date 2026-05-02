@@ -13,7 +13,7 @@ plugins {
 }
 
 group = "io.github.debanshu777"
-version = "0.1.2"
+version = "0.1.3"
 
 kotlin {
     applyDefaultHierarchyTemplate()
