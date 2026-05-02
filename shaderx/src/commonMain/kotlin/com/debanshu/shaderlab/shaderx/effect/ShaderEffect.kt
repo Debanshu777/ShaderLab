@@ -1,5 +1,6 @@
 package com.debanshu.shaderlab.shaderx.effect
 
+import androidx.compose.runtime.Stable
 import com.debanshu.shaderlab.shaderx.parameter.ParameterSpec
 import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
 
@@ -15,7 +16,8 @@ import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
  * @see RuntimeShaderEffect for effects using custom shader code
  * @see NativeEffect for platform-optimized effects
  */
-public interface ShaderEffect {
+@Stable
+public sealed interface ShaderEffect {
     /**
      * Unique identifier for this effect type.
      */
@@ -33,31 +35,35 @@ public interface ShaderEffect {
     public val parameters: List<ParameterSpec>
 
     /**
-     * Creates a new effect instance with the specified parameter value updated.
-     *
-     * This is the legacy Float-based API for backwards compatibility.
-     * For type-safe updates, use [withTypedParameter].
-     *
-     * @param parameterId The ID of the parameter to update
-     * @param value The new value for the parameter
-     * @return A new [ShaderEffect] instance with the updated parameter
-     */
-    public fun withParameter(parameterId: String, value: Float): ShaderEffect
-
-    /**
      * Creates a new effect instance with the specified typed parameter value updated.
      *
-     * This method provides type-safe parameter updates and is the recommended
-     * way to update parameters, especially for non-float types like colors.
+     * This is the canonical parameter update method. Each implementation must handle
+     * all its declared parameter types and throw [IllegalArgumentException] if the
+     * supplied value type is incompatible with the target parameter.
      *
      * @param parameterId The ID of the parameter to update
      * @param value The new typed value for the parameter
      * @return A new [ShaderEffect] instance with the updated parameter
+     * @throws IllegalArgumentException if [value]'s type is incompatible with [parameterId]
      */
-    public fun withTypedParameter(parameterId: String, value: ParameterValue): ShaderEffect {
-        // Default implementation delegates to Float-based method for backwards compatibility
-        return withParameter(parameterId, value.toFloat())
-    }
+    public fun withTypedParameter(
+        parameterId: String,
+        value: ParameterValue,
+    ): ShaderEffect
+
+    /**
+     * Creates a new effect instance with the specified float parameter value updated.
+     *
+     * Delegates to [withTypedParameter] with a [ParameterValue.FloatValue] wrapper.
+     *
+     * @param parameterId The ID of the parameter to update
+     * @param value The new float value for the parameter
+     * @return A new [ShaderEffect] instance with the updated parameter
+     */
+    public fun withParameter(
+        parameterId: String,
+        value: Float,
+    ): ShaderEffect = withTypedParameter(parameterId, ParameterValue.FloatValue(value))
 
     /**
      * Gets the current value of a parameter.

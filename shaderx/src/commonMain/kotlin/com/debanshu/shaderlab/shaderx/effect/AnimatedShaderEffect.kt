@@ -1,5 +1,6 @@
 package com.debanshu.shaderlab.shaderx.effect
 
+import androidx.compose.runtime.Stable
 import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
 
 /**
@@ -21,7 +22,32 @@ import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
  *     }
  * }
  * ```
+ *
+ * ## Equality contract — implementations MUST exclude [time]
+ *
+ * [rememberShaderEffect] drives the animation coroutine via
+ * `LaunchedEffect(effect.id, effect.isAnimating)`. Those keys are stable across frames.
+ * If [time] is included in [equals] or [hashCode], every call to [withTime] produces a
+ * new effect identity. Any caller that keys a `LaunchedEffect` on the effect instance
+ * directly will tear down and recreate the coroutine every ~16 ms — causing visible
+ * animation glitches and unnecessary allocations.
+ *
+ * Implementations must override [equals] and [hashCode] to exclude [time]:
+ *
+ * ```kotlin
+ * // ✅ Correct — time excluded
+ * override fun equals(other: Any?): Boolean {
+ *     if (other !is MyAnimatedEffect) return false
+ *     return speed == other.speed && amplitude == other.amplitude
+ *     // time NOT included
+ * }
+ * override fun hashCode(): Int = 31 * speed.hashCode() + amplitude.hashCode()
+ *
+ * // ❌ Wrong — data class default equality includes time
+ * data class MyAnimatedEffect(val speed: Float, override val time: Float = 0f) : ...
+ * ```
  */
+@Stable
 public interface AnimatedShaderEffect : RuntimeShaderEffect {
     /**
      * Whether this effect is currently animating.
@@ -43,9 +69,8 @@ public interface AnimatedShaderEffect : RuntimeShaderEffect {
      */
     public fun withTime(newTime: Float): AnimatedShaderEffect
 
-    override fun withParameter(parameterId: String, value: Float): AnimatedShaderEffect
-
-    override fun withTypedParameter(parameterId: String, value: ParameterValue): AnimatedShaderEffect {
-        return withParameter(parameterId, value.toFloat())
-    }
+    override fun withTypedParameter(
+        parameterId: String,
+        value: ParameterValue,
+    ): AnimatedShaderEffect
 }

@@ -1,6 +1,5 @@
 @file:OptIn(ExperimentalWasmDsl::class)
 
-import com.vanniktech.maven.publish.SonatypeHost
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -10,6 +9,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.vanniktechMavenPublish)
+    alias(libs.plugins.dokka)
 }
 
 group = "io.github.debanshu777"
@@ -18,6 +18,12 @@ version = "0.1.2"
 kotlin {
     applyDefaultHierarchyTemplate()
     explicitApi()
+
+    // Suppress beta warning for expect/actual classes (LruCache)
+    @Suppress("OPT_IN_USAGE")
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
 
     androidLibrary {
         namespace = "io.github.debanshu.shaderx"
@@ -93,7 +99,7 @@ kotlin {
 }
 
 mavenPublishing {
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
     signAllPublications()
     coordinates(group.toString(), "shaderx", version.toString())
 
@@ -126,5 +132,6 @@ mavenPublishing {
 
 tasks.register("generateDocs") {
     group = "documentation"
-    description = "Generates API documentation"
+    description = "Generates KDoc HTML via Dokka. Output: build/dokka/html."
+    dependsOn("dokkaGeneratePublicationHtml")
 }

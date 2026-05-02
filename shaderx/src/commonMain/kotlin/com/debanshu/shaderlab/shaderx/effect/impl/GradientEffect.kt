@@ -1,10 +1,13 @@
 package com.debanshu.shaderlab.shaderx.effect.impl
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
-import com.debanshu.shaderlab.shaderx.effect.RuntimeShaderEffect
+import com.debanshu.shaderlab.shaderx.effect.AbstractRuntimeShaderEffect
+import com.debanshu.shaderlab.shaderx.effect.ParamHandler
+import com.debanshu.shaderlab.shaderx.effect.colorHandler
+import com.debanshu.shaderlab.shaderx.effect.floatHandler
+import com.debanshu.shaderlab.shaderx.effect.toArgbLong
 import com.debanshu.shaderlab.shaderx.parameter.ColorParameter
-import com.debanshu.shaderlab.shaderx.parameter.ParameterSpec
-import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
 import com.debanshu.shaderlab.shaderx.parameter.PercentageParameter
 import com.debanshu.shaderlab.shaderx.uniform.ColorUniform
 import com.debanshu.shaderlab.shaderx.uniform.FloatUniform
@@ -14,20 +17,19 @@ import com.debanshu.shaderlab.shaderx.uniform.Uniform
  * Applies a gradient overlay effect to the image.
  *
  * Creates a smooth gradient between two colors that blends with the original image.
- * The gradient is calculated based on distance from the bottom-left corner.
- *
- * This effect demonstrates the use of [ColorUniform] for passing colors to shaders
- * with proper color space handling.
+ * The gradient is calculated based on normalized distance from the bottom-left corner,
+ * clamped to [0, 1] to avoid `mix()` extrapolation (L3 fix).
  *
  * @property color1 First gradient color in ARGB format (bottom-left)
  * @property color2 Second gradient color in ARGB format (top-right)
  * @property intensity Blend amount between original (0.0) and gradient (1.0)
  */
+@Immutable
 public data class GradientEffect(
-    private val color1: Long = DEFAULT_COLOR_1,
-    private val color2: Long = DEFAULT_COLOR_2,
-    private val intensity: Float = 0.5f,
-) : RuntimeShaderEffect {
+    public val color1: Long = DEFAULT_COLOR_1,
+    public val color2: Long = DEFAULT_COLOR_2,
+    public val intensity: Float = 0.5f,
+) : AbstractRuntimeShaderEffect() {
     override val id: String = ID
     override val displayName: String = "Gradient"
 
@@ -38,43 +40,59 @@ public data class GradientEffect(
         layout(color) uniform half4 color1;
         layout(color) uniform half4 color2;
         uniform float intensity;
-        
+
         half4 main(float2 fragCoord) {
             half4 originalColor = content.eval(fragCoord);
-            
-            // Calculate normalized coordinates
+
+            // Normalize coordinates and clamp mix to [0,1] to avoid extrapolation (L3 fix)
             float2 uv = fragCoord / resolution;
-            
-            // Calculate gradient based on distance from bottom-left corner
-            float mixValue = distance(uv, vec2(0.0, 1.0));
-            
+            float mixValue = clamp(distance(uv, vec2(0.0, 1.0)) / sqrt(2.0), 0.0, 1.0);
+
             // Interpolate between the two colors
             half4 gradientColor = mix(color1, color2, mixValue);
-            
+
             // Blend gradient with original image
             half3 blendedRgb = mix(originalColor.rgb, originalColor.rgb * gradientColor.rgb, intensity);
-            
+
             return half4(blendedRgb, originalColor.a);
         }
         """.trimIndent()
 
-    override val parameters: List<ParameterSpec> =
-        listOf(
-            ColorParameter(
-                id = PARAM_COLOR_1,
-                label = "Color 1",
-                defaultColor = color1,
-            ),
-            ColorParameter(
-                id = PARAM_COLOR_2,
-                label = "Color 2",
-                defaultColor = color2,
-            ),
-            PercentageParameter(
-                id = PARAM_INTENSITY,
-                label = "Intensity",
-                defaultValue = intensity,
-            ),
+    override val parameterHandlers: Map<String, ParamHandler<*>> =
+        mapOf(
+            PARAM_COLOR_1 to
+                colorHandler<GradientEffect>(
+                    spec =
+                        ColorParameter(
+                            id = PARAM_COLOR_1,
+                            label = "Color 1",
+                            defaultColor = DEFAULT_COLOR_1,
+                        ),
+                    read = { it.color1 },
+                    write = { e, v -> e.copy(color1 = v) },
+                ),
+            PARAM_COLOR_2 to
+                colorHandler<GradientEffect>(
+                    spec =
+                        ColorParameter(
+                            id = PARAM_COLOR_2,
+                            label = "Color 2",
+                            defaultColor = DEFAULT_COLOR_2,
+                        ),
+                    read = { it.color2 },
+                    write = { e, v -> e.copy(color2 = v) },
+                ),
+            PARAM_INTENSITY to
+                floatHandler<GradientEffect>(
+                    spec =
+                        PercentageParameter(
+                            id = PARAM_INTENSITY,
+                            label = "Intensity",
+                            defaultValue = 0.5f,
+                        ),
+                    read = { it.intensity },
+                    write = { e, v -> e.copy(intensity = v) },
+                ),
         )
 
     override fun buildUniforms(
@@ -87,54 +105,6 @@ public data class GradientEffect(
             ColorUniform("color2", color2),
             FloatUniform("intensity", intensity),
         )
-
-    override fun withParameter(
-        parameterId: String,
-        value: Float,
-    ): GradientEffect =
-        when (parameterId) {
-            PARAM_INTENSITY -> copy(intensity = value)
-            else -> this
-        }
-
-    override fun withTypedParameter(
-        parameterId: String,
-        value: ParameterValue,
-    ): GradientEffect =
-        when (parameterId) {
-            PARAM_COLOR_1 -> {
-                when (value) {
-                    is ParameterValue.ColorValue -> copy(color1 = value.color)
-                    else -> this
-                }
-            }
-
-            PARAM_COLOR_2 -> {
-                when (value) {
-                    is ParameterValue.ColorValue -> copy(color2 = value.color)
-                    else -> this
-                }
-            }
-
-            PARAM_INTENSITY -> {
-                when (value) {
-                    is ParameterValue.FloatValue -> copy(intensity = value.value)
-                    else -> this
-                }
-            }
-
-            else -> {
-                this
-            }
-        }
-
-    override fun getTypedParameterValue(parameterId: String): ParameterValue? =
-        when (parameterId) {
-            PARAM_COLOR_1 -> ParameterValue.ColorValue(color1)
-            PARAM_COLOR_2 -> ParameterValue.ColorValue(color2)
-            PARAM_INTENSITY -> ParameterValue.FloatValue(intensity)
-            else -> null
-        }
 
     /**
      * Creates a new effect with the first color updated.
@@ -176,17 +146,4 @@ public data class GradientEffect(
         /** Light yellow - default for color2 */
         public const val DEFAULT_COLOR_2: Long = 0xFFF8EE94
     }
-}
-
-/**
- * Converts a Compose Color to an ARGB Long format.
- *
- * @return Color as ARGB Long (e.g., 0xFFFF5733)
- */
-private fun Color.toArgbLong(): Long {
-    val a = (alpha * 255).toInt() and 0xFF
-    val r = (red * 255).toInt() and 0xFF
-    val g = (green * 255).toInt() and 0xFF
-    val b = (blue * 255).toInt() and 0xFF
-    return (a.toLong() shl 24) or (r.toLong() shl 16) or (g.toLong() shl 8) or b.toLong()
 }

@@ -1,34 +1,37 @@
 [versions]
-agp = "9.0.1"
-androidx-camera = "1.5.3"
-android-compileSdk = "36"
+agp = "9.1.1"
+androidx-camera = "1.6.0"
+android-compileSdk = "37"
 android-minSdk = "33"
 android-targetSdk = "36"
-androidx-activity = "1.12.4"
-androidx-core = "1.17.0"
-androidx-lifecycle = "2.9.6"
-buildkonfig = "0.17.1"
-componentsResources = "1.10.1"
-composeHotReload = "1.0.0"
-composeMultiplatform = "1.10.1"
-foundation = "1.10.1"
-kotlin = "2.3.10"
+androidx-activity = "1.13.0"
+androidx-core = "1.18.0"
+androidx-lifecycle = "2.10.0"
+buildkonfig = "0.18.0"
+coil = "3.4.0"
+componentsResources = "1.10.3"
+composeHotReload = "1.1.0"
+composeMultiplatform = "1.10.3"
+foundation = "1.10.3"
+kotlin = "2.3.21"
 kotlinx-coroutines = "1.10.2"
-kotlinx-serialization = "1.10.0"
+kotlinx-serialization = "1.11.0"
 kotlinxBrowser = "0.5.0"
-ktor = "3.4.0"
-landscapist = "2.9.5"
+ktor = "3.4.3"
+landscapist = "2.9.7"
 material3 = "1.9.0"
 materialIconsExtended = "1.7.3"
 mpfilepicker = "3.1.0"
 palette = "1.0.0"
-runtime = "1.10.1"
-skikoWasmJs = "0.9.41"
-ui = "1.10.1"
-vanniktechMavenPublish = "0.30.0"
+runtime = "1.10.3"
+skikoWasmJs = "0.144.5"
+ui = "1.10.3"
+vanniktechMavenPublish = "0.36.0"
+dokka = "2.2.0"
 
 [libraries]
 androidx-palette = { module = "androidx.palette:palette", version.ref = "palette" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "componentsResources" }
 foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "foundation" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -71,3 +74,4 @@ composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "k
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechMavenPublish" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }

@@ -80,14 +80,30 @@ public sealed interface ParameterSpec {
     /**
      * Default value when the effect is first created.
      * For backwards compatibility with Float-based parameters.
+     *
+     * **Note:** For [ColorParameter], this property always returns `0f` and has no semantic
+     * meaning. Use [getTypedDefaultValue] which returns the correct [ParameterValue] subtype
+     * for all parameter types. Prefer [getTypedDefaultValue] over this property in new code.
      */
     public val defaultValue: Float
 
     /**
      * Valid range for this parameter's value.
      * For non-float parameters, this may be a nominal range.
+     *
+     * Check [hasRange] before using this value — for [ColorParameter] and [ToggleParameter]
+     * this is a nominal placeholder with no semantic meaning.
      */
     public val range: ClosedFloatingPointRange<Float>
+
+    /**
+     * Whether this parameter has a meaningful numeric range.
+     *
+     * Returns `false` for [ColorParameter] and [ToggleParameter], where [range] is a
+     * nominal placeholder. UI components (sliders, range selectors) should check this
+     * property before reading [range].
+     */
+    public val hasRange: Boolean get() = true
 
     /**
      * Returns the typed default value for this parameter.
@@ -99,6 +115,16 @@ public sealed interface ParameterSpec {
      * Returns null if the value cannot be converted.
      */
     public fun validateValue(value: ParameterValue): ParameterValue?
+
+    /**
+     * Returns a copy of this parameter spec with [newId] as the identifier.
+     *
+     * Used by [com.debanshu.shaderlab.shaderx.effect.CompositeEffect] to namespace
+     * parameters from child effects. Because this is a member of the sealed interface,
+     * the compiler enforces that every [ParameterSpec] subtype provides an implementation —
+     * adding a new subtype without implementing [withId] is a compile error.
+     */
+    public fun withId(newId: String): ParameterSpec
 }
 
 /**
@@ -127,6 +153,8 @@ public data class FloatParameter(
             is ParameterValue.ColorValue -> null
         }
     }
+
+    override fun withId(newId: String): FloatParameter = copy(id = newId)
 }
 
 /**
@@ -154,6 +182,8 @@ public data class PercentageParameter(
             is ParameterValue.ColorValue -> null
         }
     }
+
+    override fun withId(newId: String): PercentageParameter = copy(id = newId)
 }
 
 /**
@@ -180,6 +210,8 @@ public data class PixelParameter(
             is ParameterValue.ColorValue -> null
         }
     }
+
+    override fun withId(newId: String): PixelParameter = copy(id = newId)
 }
 
 /**
@@ -196,6 +228,12 @@ public data class ToggleParameter(
     override val range: ClosedFloatingPointRange<Float> = 0f..1f
     override val defaultValue: Float = if (isEnabledByDefault) 1f else 0f
 
+    /**
+     * Toggle parameters do not have a meaningful numeric range.
+     * [range] is a nominal [0, 1] placeholder — do not use it for UI range controls.
+     */
+    override val hasRange: Boolean = false
+
     override fun getTypedDefaultValue(): ParameterValue = ParameterValue.BooleanValue(isEnabledByDefault)
 
     override fun validateValue(value: ParameterValue): ParameterValue? {
@@ -205,6 +243,8 @@ public data class ToggleParameter(
             is ParameterValue.ColorValue -> null
         }
     }
+
+    override fun withId(newId: String): ToggleParameter = copy(id = newId)
 }
 
 /**
@@ -229,10 +269,26 @@ public data class ColorParameter(
     /** Default color in ARGB format (e.g., 0xFFFF5733) */
     public val defaultColor: Long,
 ) : ParameterSpec {
-    // Range is not applicable for colors, but required by interface
+    // Range is not applicable for colors — check [hasRange] before reading [range].
     override val range: ClosedFloatingPointRange<Float> = 0f..1f
-    // defaultValue is provided for backwards compatibility
+
+    /**
+     * Always returns `0f`. Color parameters have no meaningful float representation.
+     *
+     * Use [getTypedDefaultValue] which returns [ParameterValue.ColorValue] with [defaultColor].
+     */
+    @Deprecated(
+        message = "Color parameters have no meaningful float default. Use getTypedDefaultValue() instead.",
+        replaceWith = ReplaceWith("getTypedDefaultValue()"),
+        level = DeprecationLevel.WARNING,
+    )
     override val defaultValue: Float = 0f
+
+    /**
+     * Color parameters do not have a meaningful numeric range.
+     * [range] is a nominal placeholder — do not use it for UI range controls.
+     */
+    override val hasRange: Boolean = false
 
     override fun getTypedDefaultValue(): ParameterValue = ParameterValue.ColorValue(defaultColor)
 
@@ -243,6 +299,8 @@ public data class ColorParameter(
             is ParameterValue.BooleanValue -> null
         }
     }
+
+    override fun withId(newId: String): ColorParameter = copy(id = newId)
 
     /**
      * Extracts the red component (0.0 to 1.0) from the default color.

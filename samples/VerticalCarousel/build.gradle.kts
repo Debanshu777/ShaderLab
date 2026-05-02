@@ -99,6 +99,7 @@ dependencies {
     implementation(libs.landscapist.coil3)
     implementation(libs.landscapist.animation)
     implementation(libs.landscapist.placeholder)
+    implementation(libs.coil.network.okhttp)
 
     // Palette for color extraction
     implementation(libs.androidx.palette)

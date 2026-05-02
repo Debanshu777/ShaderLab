@@ -1,8 +1,9 @@
 package com.debanshu.shaderlab.shaderx.effect.impl
 
-import com.debanshu.shaderlab.shaderx.effect.RuntimeShaderEffect
-import com.debanshu.shaderlab.shaderx.parameter.ParameterSpec
-import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
+import androidx.compose.runtime.Immutable
+import com.debanshu.shaderlab.shaderx.effect.AbstractRuntimeShaderEffect
+import com.debanshu.shaderlab.shaderx.effect.ParamHandler
+import com.debanshu.shaderlab.shaderx.effect.floatHandler
 import com.debanshu.shaderlab.shaderx.parameter.PercentageParameter
 import com.debanshu.shaderlab.shaderx.uniform.FloatUniform
 import com.debanshu.shaderlab.shaderx.uniform.Uniform
@@ -15,10 +16,11 @@ import com.debanshu.shaderlab.shaderx.uniform.Uniform
  * @property radius Distance from center where darkening begins (0.0 to 1.0)
  * @property intensity Strength of the darkening effect (0.0 to 1.0)
  */
+@Immutable
 public data class VignetteEffect(
-    private val radius: Float = 0.5f,
-    private val intensity: Float = 0.5f,
-) : RuntimeShaderEffect {
+    public val radius: Float = 0.5f,
+    public val intensity: Float = 0.5f,
+) : AbstractRuntimeShaderEffect() {
     override val id: String = ID
     override val displayName: String = "Vignette"
 
@@ -28,34 +30,41 @@ public data class VignetteEffect(
         uniform float2 resolution;
         uniform float radius;
         uniform float intensity;
-        
+
         half4 main(float2 fragCoord) {
             half4 color = content.eval(fragCoord);
-            
+
             // Normalize coordinates to center
             float2 uv = fragCoord / resolution;
             float2 center = float2(0.5, 0.5);
             float dist = distance(uv, center);
-            
+
             // Calculate vignette factor
             float vignette = smoothstep(radius, radius - intensity, dist);
-            
+
             return half4(color.rgb * vignette, color.a);
         }
         """.trimIndent()
 
-    override val parameters: List<ParameterSpec> =
-        listOf(
-            PercentageParameter(
-                id = PARAM_RADIUS,
-                label = "Radius",
-                defaultValue = radius,
-            ),
-            PercentageParameter(
-                id = PARAM_INTENSITY,
-                label = "Intensity",
-                defaultValue = intensity,
-            ),
+    override val parameterHandlers: Map<String, ParamHandler<*>> =
+        mapOf(
+            PARAM_RADIUS to
+                floatHandler<VignetteEffect>(
+                    spec = PercentageParameter(id = PARAM_RADIUS, label = "Radius", defaultValue = 0.5f),
+                    read = { it.radius },
+                    write = { e, v -> e.copy(radius = v) },
+                ),
+            PARAM_INTENSITY to
+                floatHandler<VignetteEffect>(
+                    spec =
+                        PercentageParameter(
+                            id = PARAM_INTENSITY,
+                            label = "Intensity",
+                            defaultValue = 0.5f,
+                        ),
+                    read = { it.intensity },
+                    write = { e, v -> e.copy(intensity = v) },
+                ),
         )
 
     override fun buildUniforms(
@@ -67,47 +76,6 @@ public data class VignetteEffect(
             FloatUniform("radius", radius),
             FloatUniform("intensity", intensity),
         )
-
-    override fun withParameter(
-        parameterId: String,
-        value: Float,
-    ): VignetteEffect =
-        when (parameterId) {
-            PARAM_RADIUS -> copy(radius = value)
-            PARAM_INTENSITY -> copy(intensity = value)
-            else -> this
-        }
-
-    override fun withTypedParameter(
-        parameterId: String,
-        value: ParameterValue,
-    ): VignetteEffect =
-        when (parameterId) {
-            PARAM_RADIUS -> {
-                when (value) {
-                    is ParameterValue.FloatValue -> copy(radius = value.value)
-                    else -> this
-                }
-            }
-
-            PARAM_INTENSITY -> {
-                when (value) {
-                    is ParameterValue.FloatValue -> copy(intensity = value.value)
-                    else -> this
-                }
-            }
-
-            else -> {
-                this
-            }
-        }
-
-    override fun getTypedParameterValue(parameterId: String): ParameterValue? =
-        when (parameterId) {
-            PARAM_RADIUS -> ParameterValue.FloatValue(radius)
-            PARAM_INTENSITY -> ParameterValue.FloatValue(intensity)
-            else -> null
-        }
 
     public companion object {
         public const val ID: String = "vignette"

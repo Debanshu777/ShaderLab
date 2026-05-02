@@ -1,5 +1,6 @@
 package com.debanshu.shaderlab.shaderx.effect
 
+import androidx.compose.runtime.Stable
 import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
 import com.debanshu.shaderlab.shaderx.uniform.Uniform
 
@@ -27,6 +28,7 @@ import com.debanshu.shaderlab.shaderx.uniform.Uniform
  *
  * @see AnimatedShaderEffect for effects that animate over time
  */
+@Stable
 public interface RuntimeShaderEffect : ShaderEffect {
     /**
      * The AGSL/SkSL shader source code.
@@ -48,9 +50,8 @@ public interface RuntimeShaderEffect : ShaderEffect {
      */
     public fun buildUniforms(width: Float, height: Float): List<Uniform>
 
-    override fun withParameter(parameterId: String, value: Float): RuntimeShaderEffect
-
-    override fun withTypedParameter(parameterId: String, value: ParameterValue): RuntimeShaderEffect {
-        return withParameter(parameterId, value.toFloat())
-    }
+    override fun withTypedParameter(
+        parameterId: String,
+        value: ParameterValue,
+    ): RuntimeShaderEffect
 }

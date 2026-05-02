@@ -1,5 +1,6 @@
 package com.debanshu.shaderlab.shaderx.effect
 
+import androidx.compose.runtime.Immutable
 import com.debanshu.shaderlab.shaderx.parameter.ParameterSpec
 import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
 
@@ -8,7 +9,7 @@ import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
  *
  * Each effect is applied in order, with the output of one becoming
  * the input of the next. Chaining is supported on Android (API 31+);
- * on other platforms only the last effect is applied.
+ * on other platforms a [ShaderError.UnsupportedEffect] error is returned.
  *
  * ## Usage
  * ```kotlin
@@ -29,12 +30,26 @@ import com.debanshu.shaderlab.shaderx.parameter.ParameterValue
  *
  * @property effects The list of effects to apply in order
  */
+@Immutable
 public data class CompositeEffect(
     public val effects: List<ShaderEffect>,
 ) : ShaderEffect {
 
     init {
         require(effects.isNotEmpty()) { "CompositeEffect requires at least one effect" }
+        // Validate that no leaf (non-composite) effect has a parameter ID containing
+        // the reserved delimiter. CompositeEffect children are excluded because their
+        // parameter IDs are already library-generated and contain the delimiter by design.
+        effects.forEach { eff ->
+            if (eff !is CompositeEffect) {
+                eff.parameters.forEach { p ->
+                    require(DELIMITER !in p.id) {
+                        "Parameter ID '${p.id}' in effect '${eff.id}' contains the reserved delimiter (U+001F). " +
+                            "Choose a parameter ID without this character."
+                    }
+                }
+            }
+        }
     }
 
     override val id: String = "composite_${effects.joinToString("_") { it.id }}"
@@ -44,27 +59,21 @@ public data class CompositeEffect(
     /**
      * Combined parameters from all contained effects.
      *
-     * Parameter IDs are prefixed with the effect index to avoid collisions.
-     * For example, if both effects have an "intensity" parameter, they become
-     * "0_intensity" and "1_intensity".
+     * Parameter IDs are prefixed with the effect index and a non-printing delimiter
+     * (U+001F, ASCII Unit Separator) to avoid collisions even when effect IDs
+     * contain underscores. For example, two effects with "intensity" become
+     * "0\u001Fintensity" and "1\u001Fintensity".
+     *
+     * Prefixing is delegated to [com.debanshu.shaderlab.shaderx.parameter.ParameterSpec.withId],
+     * which is a sealed-interface member — the compiler enforces that every [ParameterSpec]
+     * subtype handles it.
      */
     override val parameters: List<ParameterSpec> =
         effects.flatMapIndexed { index, effect ->
             effect.parameters.map { param ->
-                createPrefixedParameter(index, param)
+                param.withId("$index$DELIMITER${param.id}")
             }
         }
-
-    override fun withParameter(parameterId: String, value: Float): CompositeEffect {
-        val (index, originalId) = parseParameterId(parameterId) ?: return this
-
-        val updatedEffects = effects.toMutableList()
-        if (index in effects.indices) {
-            updatedEffects[index] = effects[index].withParameter(originalId, value)
-        }
-
-        return copy(effects = updatedEffects)
-    }
 
     override fun withTypedParameter(parameterId: String, value: ParameterValue): CompositeEffect {
         val (index, originalId) = parseParameterId(parameterId) ?: return this
@@ -106,16 +115,23 @@ public data class CompositeEffect(
     public val size: Int get() = effects.size
 
     private fun parseParameterId(parameterId: String): Pair<Int, String>? {
-        val underscoreIndex = parameterId.indexOf('_')
-        if (underscoreIndex <= 0) return null
+        val delimIndex = parameterId.indexOf(DELIMITER)
+        if (delimIndex <= 0) return null
 
-        val indexStr = parameterId.substring(0, underscoreIndex)
-        val originalId = parameterId.substring(underscoreIndex + 1)
+        val indexStr = parameterId.substring(0, delimIndex)
+        val originalId = parameterId.substring(delimIndex + 1)
 
         return indexStr.toIntOrNull()?.let { it to originalId }
     }
 
     public companion object {
+        /**
+         * Non-printing delimiter used to separate the effect index from the
+         * parameter ID in composite parameter names. U+001F cannot appear in
+         * normal user-defined parameter IDs.
+         */
+        public const val DELIMITER: Char = '\u001F'
+
         /**
          * Creates a composite effect from the given effects.
          */
@@ -127,50 +143,6 @@ public data class CompositeEffect(
          */
         public fun of(effects: List<ShaderEffect>): CompositeEffect =
             CompositeEffect(effects)
-    }
-}
-
-/**
- * Creates a prefixed version of a parameter spec for composite effects.
- *
- * Exhaustive over [ParameterSpec] sealed hierarchy. Add handling for any new
- * [ParameterSpec] subtypes when extending the parameter system.
- */
-private fun createPrefixedParameter(effectIndex: Int, delegate: ParameterSpec): ParameterSpec {
-    return when (delegate) {
-        is com.debanshu.shaderlab.shaderx.parameter.FloatParameter ->
-            com.debanshu.shaderlab.shaderx.parameter.FloatParameter(
-                id = "${effectIndex}_${delegate.id}",
-                label = delegate.label,
-                range = delegate.range,
-                defaultValue = delegate.defaultValue,
-                decimalPlaces = delegate.decimalPlaces
-            )
-        is com.debanshu.shaderlab.shaderx.parameter.PercentageParameter ->
-            com.debanshu.shaderlab.shaderx.parameter.PercentageParameter(
-                id = "${effectIndex}_${delegate.id}",
-                label = delegate.label,
-                defaultValue = delegate.defaultValue
-            )
-        is com.debanshu.shaderlab.shaderx.parameter.PixelParameter ->
-            com.debanshu.shaderlab.shaderx.parameter.PixelParameter(
-                id = "${effectIndex}_${delegate.id}",
-                label = delegate.label,
-                range = delegate.range,
-                defaultValue = delegate.defaultValue
-            )
-        is com.debanshu.shaderlab.shaderx.parameter.ToggleParameter ->
-            com.debanshu.shaderlab.shaderx.parameter.ToggleParameter(
-                id = "${effectIndex}_${delegate.id}",
-                label = delegate.label,
-                isEnabledByDefault = delegate.isEnabledByDefault
-            )
-        is com.debanshu.shaderlab.shaderx.parameter.ColorParameter ->
-            com.debanshu.shaderlab.shaderx.parameter.ColorParameter(
-                id = "${effectIndex}_${delegate.id}",
-                label = delegate.label,
-                defaultColor = delegate.defaultColor
-            )
     }
 }
 
@@ -194,4 +166,3 @@ public operator fun ShaderEffect.plus(other: ShaderEffect): CompositeEffect = wh
     else ->
         CompositeEffect(listOf(this, other))
 }
-

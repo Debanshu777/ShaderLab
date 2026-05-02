@@ -79,7 +79,7 @@ fun ShaderLabContent(
     val scope = rememberCoroutineScope()
     val permissionHandler = rememberPermissionHandler()
     val shaderFactory = remember { ShaderFactory.create() }
-    val imageProcessor = remember { ImageProcessor.create() }
+    val imageProcessor = remember { ImageProcessor.create(shaderFactory) }
 
     val imagePicker =
         rememberImagePickerLauncher { result ->

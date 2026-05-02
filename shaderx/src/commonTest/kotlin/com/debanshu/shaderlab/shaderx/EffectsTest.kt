@@ -87,13 +87,17 @@ class EffectsTest {
 
     @Test
     fun invertEffect_hasNoParameters() {
-        assertTrue(InvertEffect.parameters.isEmpty())
+        assertTrue(InvertEffect().parameters.isEmpty())
     }
 
     @Test
     fun invertEffect_withParameter_returnsSame() {
-        val updated = InvertEffect.withParameter("anything", 1f)
-        assertTrue(updated === InvertEffect)
+        val effect = InvertEffect()
+        val updated = effect.withParameter("anything", 1f)
+        assertEquals(
+            effect,
+            updated,
+        ) // data class with no-op withTypedParameter returns equal instance
     }
 
     @Test
@@ -111,7 +115,8 @@ class EffectsTest {
         val updated = effect.withTime(1.5f)
 
         assertEquals(1.5f, updated.time)
-        assertNotEquals(effect, updated)
+        // Note: WaveEffect equality excludes time (Phase 4 fix) so the two instances
+        // are structurally equal even though `time` differs. Verify only the time field.
     }
 
     @Test
@@ -144,7 +149,7 @@ class EffectsTest {
                 VignetteEffect(),
                 PixelateEffect(),
                 ChromaticAberrationEffect(),
-                InvertEffect,
+                InvertEffect(),
                 WaveEffect(),
                 GradientEffect(),
             )
@@ -444,5 +449,50 @@ class EffectsTest {
         val effects1 = ShaderX.builtInEffects()
         val effects2 = ShaderX.builtInEffects()
         assertSame(effects1, effects2, "builtInEffects should return cached list")
+    }
+
+    // ── Issue 4: Uniform name validation ─────────────────────────────────────
+    // Catches the class of bug where buildUniforms() provides a name that is not
+    // declared in shaderSource (silent runtime failure — shader uses GPU default 0.0).
+
+    @Test
+    fun allRuntimeEffects_providedUniformsAreDeclaredInShader() {
+        val runtimeEffects =
+            listOf(
+                GrayscaleEffect(),
+                SepiaEffect(),
+                VignetteEffect(),
+                PixelateEffect(),
+                ChromaticAberrationEffect(),
+                InvertEffect(),
+                WaveEffect(),
+                GradientEffect(),
+            )
+
+        runtimeEffects.forEach { effect ->
+            val declaredNames = parseShaderUniformNames(effect.shaderSource)
+            val providedNames = effect.buildUniforms(100f, 100f).map { it.name }.toSet()
+
+            // Every uniform supplied by buildUniforms must be declared in the shader.
+            // (The "content" sampler uniform is declared in the shader but never supplied
+            //  via buildUniforms — it is wired by the factory — so it is excluded here.)
+            val undeclared = providedNames - declaredNames
+            assertTrue(
+                undeclared.isEmpty(),
+                "Effect '${effect.id}' calls buildUniforms() with names not declared " +
+                    "in shaderSource: $undeclared. Fix the name mismatch.",
+            )
+        }
+    }
+
+    private fun parseShaderUniformNames(shaderSource: String): Set<String> {
+        // Matches: [optional layout(...)] uniform <type> <name>
+        // Examples:
+        //   uniform float intensity;
+        //   uniform float2 resolution;
+        //   layout(color) uniform half4 color1;
+        //   uniform shader content;
+        val pattern = Regex("""(?:layout\([^)]*\)\s+)?uniform\s+\S+\s+(\w+)""")
+        return pattern.findAll(shaderSource).map { it.groupValues[1] }.toSet()
     }
 }

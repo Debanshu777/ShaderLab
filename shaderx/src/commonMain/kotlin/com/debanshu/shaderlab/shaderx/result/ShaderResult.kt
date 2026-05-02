@@ -62,6 +62,36 @@ public sealed class ShaderResult<out T> {
     }
 
     /**
+     * Chains another [ShaderResult]-returning operation on success.
+     */
+    public inline fun <R> flatMap(transform: (T) -> ShaderResult<R>): ShaderResult<R> =
+        when (this) {
+            is Success -> transform(value)
+            is Failure -> Failure(error)
+        }
+
+    /**
+     * Applies [onSuccess] or [onFailure] and returns their result.
+     */
+    public inline fun <R> fold(
+        onSuccess: (T) -> R,
+        onFailure: (ShaderError) -> R,
+    ): R =
+        when (this) {
+            is Success -> onSuccess(value)
+            is Failure -> onFailure(error)
+        }
+
+    /**
+     * Converts a failure to a success by applying [transform] to the error.
+     */
+    public inline fun recover(transform: (ShaderError) -> @UnsafeVariance T): ShaderResult<T> =
+        when (this) {
+            is Success -> this
+            is Failure -> Success(transform(error))
+        }
+
+    /**
      * Executes the given block if this is a success.
      */
     public inline fun onSuccess(action: (T) -> Unit): ShaderResult<T> {
